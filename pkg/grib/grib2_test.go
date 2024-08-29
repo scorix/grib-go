@@ -15,13 +15,25 @@ func TestGrib_ReadSection0(t *testing.T) {
 	require.NoError(t, err)
 
 	g := grib.NewGrib2(f)
-	sec, err := g.ReadSection0()
-	require.NoError(t, err)
+	{
+		sec, err := g.ReadSection0()
+		require.NoError(t, err)
 
-	assert.Equal(t, "GRIB", string(sec.GribLiteral[:]))
-	assert.Equal(t, 2, sec.GetEditionNumber())
-	assert.Equal(t, 0, sec.GetDiscipline())
-	assert.Equal(t, 203278, sec.GetGribLength())
+		assert.Equal(t, "GRIB", string(sec.GribLiteral[:]))
+		assert.Equal(t, 2, sec.GetEditionNumber())
+		assert.Equal(t, 0, sec.GetDiscipline())
+		assert.Equal(t, 203278, sec.GetGribLength())
+	}
+
+	{
+		sec, err := g.ReadSection0()
+		require.NoError(t, err)
+
+		assert.Equal(t, "GRIB", string(sec.GribLiteral[:]))
+		assert.Equal(t, 2, sec.GetEditionNumber())
+		assert.Equal(t, 0, sec.GetDiscipline())
+		assert.Equal(t, 203278, sec.GetGribLength())
+	}
 }
 
 func TestGrib_ReadSection1(t *testing.T) {
@@ -29,12 +41,36 @@ func TestGrib_ReadSection1(t *testing.T) {
 	require.NoError(t, err)
 
 	g := grib.NewGrib2(f)
-	sec, err := g.ReadSection1()
+	{
+		sec, err := g.ReadSection1()
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, sec.GetSectionNumber())
+		assert.Equal(t, "2023-07-11T00:00:00Z", sec.GetTime().Format(time.RFC3339))
+		assert.Equal(t, grib.ReferenceTimeStartOfForecast, sec.SignificanceOfReferenceTime)
+		assert.Equal(t, 29, sec.GetMasterTableVersion())
+		assert.Equal(t, 1, sec.GetLocalTableVersion())
+	}
+
+	{
+		sec, err := g.ReadSection1()
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, sec.GetSectionNumber())
+		assert.Equal(t, "2023-07-11T00:00:00Z", sec.GetTime().Format(time.RFC3339))
+		assert.Equal(t, grib.ReferenceTimeStartOfForecast, sec.SignificanceOfReferenceTime)
+		assert.Equal(t, 29, sec.GetMasterTableVersion())
+		assert.Equal(t, 1, sec.GetLocalTableVersion())
+	}
+}
+
+func TestGrib_ReadSection2(t *testing.T) {
+	f, err := os.Open("testdata/temp.grib2")
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, sec.GetSectionNumber())
-	assert.Equal(t, "2023-07-11T00:00:00Z", sec.GetTime().Format(time.RFC3339))
-	assert.Equal(t, grib.ReferenceTimeStartOfForecast, sec.SignificanceOfReferenceTime)
-	assert.Equal(t, 29, sec.GetMasterTableVersion())
-	assert.Equal(t, 1, sec.GetLocalTableVersion())
+	g := grib.NewGrib2(f)
+	{
+		_, err := g.ReadSection2()
+		require.ErrorIs(t, err, grib.ErrSectionNotMatched)
+	}
 }
