@@ -6,31 +6,23 @@ import (
 )
 
 type Section6 struct {
-	section section6
+	section6
 }
 
 func (s *Section6) SectionLength() int {
-	return s.section.SectionLength()
+	return int(s.Section6Length)
 }
 
 func (s *Section6) SectionNumber() int {
-	return s.section.SectionNumber()
+	return int(s.NumberOfSection)
 }
 
 func (s *Section6) ReadFrom(r io.Reader) error {
-	return binary.Read(r, binary.BigEndian, &s.section)
+	return binary.Read(r, binary.BigEndian, &s.section6)
 }
 
 type section6 struct {
 	Section6Length  uint32 // Length of the section in octets (N)
 	NumberOfSection uint8  // 6 - Number of the section
 	BitMapIndicator uint8
-}
-
-func (s *section6) SectionLength() int {
-	return int(s.Section6Length)
-}
-
-func (s *section6) SectionNumber() int {
-	return int(s.NumberOfSection)
 }
