@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"sync"
 )
 
 var (
@@ -18,30 +19,28 @@ var (
 )
 
 type gribReader interface {
-	io.Reader
+	io.ReadSeeker
 	io.ReaderAt
-	io.Seeker
 }
 
 func NewGrib2(r gribReader) *Grib2 {
 	return &Grib2{
-		r:              r,
-		offsetSection0: 0,
-		offsetSection1: 16,
+		r: r,
 	}
 }
 
 type Grib2 struct {
 	r gribReader
 
-	offsetSection0 int64
-	offsetSection1 int64
-	offsetSection2 int64
+	m sync.Mutex
 }
 
 // ReadSection0
 func (g *Grib2) ReadSection0() (*Section0, error) {
-	if _, err := g.r.Seek(g.offsetSection0, io.SeekStart); err != nil {
+	g.m.Lock()
+	defer g.m.Unlock()
+
+	if _, err := g.r.Seek(0, io.SeekStart); err != nil {
 		return nil, err
 	}
 
@@ -66,94 +65,81 @@ func (g *Grib2) ReadSection0() (*Section0, error) {
 	return &sec, nil
 }
 
-// ReadSection1
-func (g *Grib2) ReadSection1() (*Section1, error) {
-	if _, err := g.r.Seek(g.offsetSection1, io.SeekStart); err != nil {
-		return nil, err
-	}
+func (g *Grib2) NextSection() (Section, error) {
+	g.m.Lock()
+	defer g.m.Unlock()
 
-	var sec section1
-
-	length := make([]byte, 4)
-	if _, err := g.r.Read(length); err != nil {
-		return nil, fmt.Errorf("reader: read section 1 length: %w", err)
-	}
-
-	if err := binary.Read(bytes.NewReader(length), binary.BigEndian, &sec.Length); err != nil {
-		return nil, fmt.Errorf("binary: read section 1 length: %w", err)
-	}
-
-	bs := make([]byte, sec.Length-4)
-	if _, err := g.r.Read(bs); err != nil {
-		return nil, fmt.Errorf("reader: read section 1: %w", err)
-	}
-
-	bs = append(length, bs...)
-
-	if err := binary.Read(bytes.NewReader(bs), binary.BigEndian, &sec); err != nil {
-		return nil, fmt.Errorf("binary: read section1: %w", err)
-	}
-
-	reserved := make([]byte, sec.Length-21)
-
-	if lenReserved := int64(len(reserved)); lenReserved > 0 {
-		copy(bs[21:], reserved)
-
-		if _, err := g.r.Seek(lenReserved, io.SeekCurrent); err != nil {
-			return nil, err
+	var (
+		secHead struct {
+			SectionLength uint32
+			Number        uint8
 		}
+		bs  = make([]byte, 5)
+		buf = bytes.NewBuffer(nil)
+		tee = io.TeeReader(g.r, buf)
+	)
+
+	if _, err := tee.Read(bs); err != nil {
+		return nil, fmt.Errorf("reader: next section: %w", err)
 	}
 
-	if sec.SectionNumber != 1 {
-		return nil, fmt.Errorf("section 1: %w", ErrSectionNotMatched)
-	}
-
-	return &Section1{section1: sec, reserved: reserved}, nil
-}
-
-// ReadSection2
-func (g *Grib2) ReadSection2() (*Section2, error) {
-	if g.offsetSection2 < g.offsetSection1 {
-		sec1, err := g.ReadSection1()
-		if err != nil {
-			return nil, err
+	switch buf.Len() {
+	case 5:
+		if err := binary.Read(bytes.NewReader(buf.Bytes()), binary.BigEndian, &secHead); err != nil {
+			return nil, fmt.Errorf("binary: next section length: %w", err)
 		}
 
-		g.offsetSection2 = g.offsetSection1 + int64(sec1.Length)
-	} else {
-		if _, err := g.r.Seek(g.offsetSection2, io.SeekStart); err != nil {
-			return nil, err
+	case 4:
+		sec := Section8{section: section8{}}
+
+		if err := sec.ReadFrom(bytes.NewReader(buf.Bytes())); err != nil {
+			return nil, fmt.Errorf("section8: %w", err)
 		}
+
+		return &sec, nil
 	}
 
-	var sec section2
+	if moreBytesLen := secHead.SectionLength - uint32(buf.Len()); moreBytesLen > 0 {
+		bs = make([]byte, moreBytesLen)
 
-	length := make([]byte, 4)
-	if _, err := g.r.Read(length); err != nil {
-		return nil, fmt.Errorf("reader: read section 2 length: %w", err)
+		if _, err := tee.Read(bs); err != nil {
+			return nil, fmt.Errorf("section %d: next section: %w", secHead.Number, err)
+		}
+
+		var sec Section
+
+		switch secHead.Number {
+		case 1:
+			sec = &Section1{section: section1{}}
+
+		case 2:
+			sec = &Section2{section: section2{}}
+
+		case 3:
+			sec = &Section3{section: section3{}}
+
+		case 4:
+			sec = &Section4{section: section4{}}
+
+		case 5:
+			sec = &Section5{section: section5{}}
+
+		case 6:
+			sec = &Section6{section: section6{}}
+
+		case 7:
+			sec = &Section7{section: section7{}}
+
+		default:
+			return nil, fmt.Errorf("section %d: %w", secHead.Number, ErrNotWellFormed)
+		}
+
+		if err := sec.ReadFrom(buf); err != nil {
+			return nil, fmt.Errorf("binary: next section: %w", err)
+		}
+
+		return sec, nil
 	}
 
-	if err := binary.Read(bytes.NewReader(length), binary.BigEndian, &sec.Length); err != nil {
-		return nil, fmt.Errorf("binary: read section 2 length: %w", err)
-	}
-
-	bs := make([]byte, sec.Length-4)
-	if _, err := g.r.Read(bs); err != nil {
-		return nil, fmt.Errorf("reader: read section 2: %w", err)
-	}
-
-	bs = append(length, bs...)
-
-	if err := binary.Read(bytes.NewReader(bs), binary.BigEndian, &sec); err != nil {
-		return nil, fmt.Errorf("binary: read section2: %w", err)
-	}
-
-	if sec.SectionNumber != 2 {
-		return nil, fmt.Errorf("section 2: %w", ErrSectionNotMatched)
-	}
-
-	local := make([]byte, sec.Length-5)
-	copy(bs[5:], local)
-
-	return &Section2{section2: sec, local: local}, nil
+	return nil, ErrNotWellFormed
 }
