@@ -36,10 +36,7 @@ func (s *Section1) SectionNumber() int {
 }
 
 func (s *Section1) ReadFrom(r io.Reader) error {
-	buf := bytes.NewBuffer(make([]byte, s.SectionLength()))
-	tee := io.TeeReader(r, buf)
-
-	if err := binary.Read(tee, binary.BigEndian, &s.section); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &s.section); err != nil {
 		return fmt.Errorf("binary read: %w", err)
 	}
 
