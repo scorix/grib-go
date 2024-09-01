@@ -1,47 +1,53 @@
-package grib
+package grib2
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
 
-	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
+	"github.com/scorix/grib-go/pkg/grib2/definition"
+	"github.com/scorix/grib-go/pkg/grib2/drt"
 )
 
-type Section7 struct {
-	section7
-	dataReader datapacking.UnpackReader
-	data       []float64
+type Section7 interface {
+	Section
+	GetData(drt.Template) ([]float64, error)
 }
 
-func (s *Section7) SectionLength() int {
+type section7 struct {
+	definition.Section7
+}
+
+func (s *section7) Length() int {
 	return int(s.Section7Length)
 }
 
-func (s *Section7) SectionNumber() int {
+func (s *section7) Number() int {
 	return int(s.NumberOfSection)
 }
 
-func (s *Section7) ReadFrom(r io.Reader) error {
-	if err := binary.Read(r, binary.BigEndian, &s.section7); err != nil {
+func (s *section7) readFrom(r io.Reader) error {
+	if err := binary.Read(r, binary.BigEndian, &s.Section7.Section7FixedPart); err != nil {
 		return fmt.Errorf("binary read: %w", err)
 	}
 
-	data, err := s.dataReader.ReadData(r)
-	if err != nil {
-		return fmt.Errorf("read data: %w", err)
+	data := bytes.NewBuffer(nil)
+
+	if _, err := io.Copy(data, r); err != nil {
+		return err
 	}
 
-	s.data = data
+	s.Data = data.Bytes()
 
 	return nil
 }
 
-func (s *Section7) Data() []float64 {
-	return s.data
-}
+func (s *section7) GetData(tpl drt.Template) ([]float64, error) {
+	data, err := drt.ScaleData(tpl, bytes.NewReader(s.Data))
+	if err != nil {
+		return nil, fmt.Errorf("read data: %w", err)
+	}
 
-type section7 struct {
-	Section7Length  uint32 // Length of the section in octets (N)
-	NumberOfSection uint8  // 7 - Number of the section
+	return data, nil
 }

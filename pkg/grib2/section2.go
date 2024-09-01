@@ -1,28 +1,41 @@
-package grib
+package grib2
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io"
+
+	"github.com/scorix/grib-go/pkg/grib2/definition"
 )
 
-type Section2 struct {
-	section2
-	local []byte // 6-N Local Use
-}
-
-func (s *Section2) SectionLength() int {
-	return int(s.Section2Length)
-}
-
-func (s *Section2) SectionNumber() int {
-	return int(s.NumberOfSection)
-}
-
-func (s *Section2) ReadFrom(r io.Reader) error {
-	return binary.Read(r, binary.BigEndian, &s.section2)
+type Section2 interface {
+	Section
 }
 
 type section2 struct {
-	Section2Length  uint32 // Length of the section in octets (N)
-	NumberOfSection uint8  // 2 - Number of the section
+	definition.Section2
+}
+
+func (s *section2) Length() int {
+	return int(s.Section2Length)
+}
+
+func (s *section2) Number() int {
+	return int(s.NumberOfSection)
+}
+
+func (s *section2) readFrom(r io.Reader) error {
+	if err := binary.Read(r, binary.BigEndian, &s.Section2.Section2FixedPart); err != nil {
+		return err
+	}
+
+	buf := bytes.NewBuffer(nil)
+
+	if _, err := io.Copy(buf, r); err != nil {
+		return err
+	}
+
+	s.Local = buf.Bytes()
+
+	return nil
 }
