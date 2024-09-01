@@ -1,33 +1,39 @@
-package grib
+package grib2
 
 import (
 	"encoding/binary"
 	"fmt"
 	"io"
 
+	"github.com/scorix/grib-go/pkg/grib2/definition"
 	"github.com/scorix/grib-go/pkg/grib2/pdt"
 )
 
-type Section4 struct {
-	defSection4
+type Section4 interface {
+	Section
+	GetProductDefinitionTemplate() pdt.Template
 }
 
-func (s *Section4) SectionLength() int {
+type section4 struct {
+	definition.Section4
+}
+
+func (s *section4) Length() int {
 	return int(s.Section4Length)
 }
 
-func (s *Section4) SectionNumber() int {
+func (s *section4) Number() int {
 	return int(s.NumberOfSection)
 }
 
-func (s *Section4) ReadFrom(r io.Reader) error {
-	if err := binary.Read(r, binary.BigEndian, &s.section4); err != nil {
+func (s *section4) readFrom(r io.Reader) error {
+	if err := binary.Read(r, binary.BigEndian, &s.Section4.Section4FixedPart); err != nil {
 		return err
 	}
 
-	switch n := s.section4.ProductDefinitionTemplateNumber; n {
+	switch n := s.Section4.ProductDefinitionTemplateNumber; n {
 	case 0:
-		s.Template = &pdt.Template0{}
+		s.ProductDefinitionTemplate = &pdt.Template0{}
 
 	case 255:
 		return nil
@@ -36,17 +42,9 @@ func (s *Section4) ReadFrom(r io.Reader) error {
 		return fmt.Errorf("unsupported product definition template: %d", n)
 	}
 
-	return binary.Read(r, binary.BigEndian, s.Template)
+	return binary.Read(r, binary.BigEndian, s.ProductDefinitionTemplate)
 }
 
-type defSection4 struct {
-	section4
-	pdt.Template
-}
-
-type section4 struct {
-	Section4Length                  uint32 // Length of the section in octets (N)
-	NumberOfSection                 uint8  // 4 - Number of the section
-	NV                              uint16
-	ProductDefinitionTemplateNumber uint16
+func (s *section4) GetProductDefinitionTemplate() pdt.Template {
+	return s.ProductDefinitionTemplate
 }

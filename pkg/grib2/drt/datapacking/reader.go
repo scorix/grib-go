@@ -1,7 +1,6 @@
 package datapacking
 
-import "io"
-
 type UnpackReader interface {
-	ReadData(io.Reader) ([]float64, error)
+	ScaleFunc() func(uint64) float64
+	GetBits() uint8
 }

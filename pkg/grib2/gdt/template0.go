@@ -16,6 +16,11 @@ Notes:
 in the grid. However, this may not be true if bit 8 of the scanning mode flags (octet 72) is set to 1.
 */
 type Template0 struct {
+	Template0FixedPart
+	// TODO: 73-nn: List of number of points along each meridian or parallel (These octets are only present for quasi-regular grids as described in notes 2 and 3)
+}
+
+type Template0FixedPart struct {
 	ShapeOfTheEarth                        uint8
 	ScaleFactorOfRadiusOfSphericalEarth    uint8
 	ScaledValueOfRadiusOfSphericalEarth    uint32
@@ -35,5 +40,4 @@ type Template0 struct {
 	IDirectionIncrement                    uint32
 	JDirectionIncrement                    uint32
 	ScanningMode                           uint8
-	// TODO: 73-nn: List of number of points along each meridian or parallel (These octets are only present for quasi-regular grids as described in notes 2 and 3)
 }

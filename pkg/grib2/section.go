@@ -1,15 +1,19 @@
-package grib
+package grib2
 
 import (
 	"io"
 )
 
 type Section interface {
-	fixedLengthSection
-	ReadFrom(r io.Reader) error
+	Number() int
+	Length() int
+	readFrom(r io.Reader) error
+	// Bytes() []byte
 }
 
-type fixedLengthSection interface {
-	SectionLength() int
-	SectionNumber() int
+type Section0 interface {
+	Section
+	GetEditionNumber() int
+	GetDiscipline() int
+	GetGribLength() int
 }
