@@ -1,6 +1,8 @@
 package grib
 
-import "io"
+import (
+	"io"
+)
 
 type Section interface {
 	fixedLengthSection

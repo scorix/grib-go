@@ -23,23 +23,20 @@ const (
 )
 
 type Section1 struct {
-	section  section1
+	section1
 	reserved []byte // 22-N Reserved
 }
 
 func (s *Section1) SectionLength() int {
-	return s.section.SectionLength()
+	return int(s.Section1Length)
 }
 
 func (s *Section1) SectionNumber() int {
-	return s.section.SectionNumber()
+	return int(s.NumberOfSection)
 }
 
 func (s *Section1) ReadFrom(r io.Reader) error {
-	buf := bytes.NewBuffer(make([]byte, s.SectionLength()))
-	tee := io.TeeReader(r, buf)
-
-	if err := binary.Read(tee, binary.BigEndian, &s.section); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &s.section1); err != nil {
 		return fmt.Errorf("binary read: %w", err)
 	}
 
@@ -55,7 +52,7 @@ func (s *Section1) ReadFrom(r io.Reader) error {
 }
 
 func (s *Section1) GetTime(loc *time.Location) time.Time {
-	return time.Date(int(s.section.Year), time.Month(s.section.Month), int(s.section.Day), int(s.section.Hour), int(s.section.Minute), int(s.section.Second), 0, loc)
+	return time.Date(int(s.Year), time.Month(s.Month), int(s.Day), int(s.Hour), int(s.Minute), int(s.Second), 0, loc)
 }
 
 type section1 struct {
@@ -74,12 +71,4 @@ type section1 struct {
 	Second                          uint8         // Second
 	ProductionStatusOfProcessedData uint8         // Production Status of Processed data in the GRIB message: https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table1-3.shtml
 	TypeOfProcessedData             uint8         // Type of processed data in this GRIB message: https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table1-4.shtml
-}
-
-func (s *section1) SectionLength() int {
-	return int(s.Section1Length)
-}
-
-func (s *section1) SectionNumber() int {
-	return int(s.NumberOfSection)
 }
