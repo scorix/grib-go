@@ -31,8 +31,8 @@ func (s *section8) readFrom(r io.Reader) error {
 
 	magicNumber := [4]byte{'7', '7', '7', '7'}
 
-	if s.MagicNumber != magicNumber {
-		return fmt.Errorf("malformed section8: %d", s.MagicNumber)
+	if s.Section8.MagicNumber != magicNumber {
+		return fmt.Errorf("malformed section8: %d", s.Section8.MagicNumber)
 	}
 
 	return nil

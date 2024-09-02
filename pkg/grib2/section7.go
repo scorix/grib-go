@@ -20,11 +20,11 @@ type section7 struct {
 }
 
 func (s *section7) Length() int {
-	return int(s.Section7Length)
+	return int(s.Section7.Section7Length)
 }
 
 func (s *section7) Number() int {
-	return int(s.NumberOfSection)
+	return int(s.Section7.NumberOfSection)
 }
 
 func (s *section7) readFrom(r io.Reader) error {
@@ -38,13 +38,13 @@ func (s *section7) readFrom(r io.Reader) error {
 		return err
 	}
 
-	s.Data = data.Bytes()
+	s.Section7.Data = data.Bytes()
 
 	return nil
 }
 
 func (s *section7) GetData(tpl drt.Template) ([]float64, error) {
-	data, err := drt.ScaleData(tpl, bytes.NewReader(s.Data))
+	data, err := drt.ReadAllData(tpl, bytes.NewReader(s.Section7.Data))
 	if err != nil {
 		return nil, fmt.Errorf("read data: %w", err)
 	}
