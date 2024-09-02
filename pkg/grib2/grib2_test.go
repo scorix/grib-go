@@ -12,7 +12,7 @@ import (
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 	"github.com/scorix/grib-go/pkg/grib2/gdt"
 	"github.com/scorix/grib-go/pkg/grib2/pdt"
-	"github.com/scorix/grib-go/pkg/grib2/scale"
+	"github.com/scorix/grib-go/pkg/grib2/regulation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,7 +71,7 @@ func assertSection5(t testing.TB, sec grib.Section, template drt.Template) {
 	assert.Equal(t, template, sec5.GetDataRepresentationTemplate())
 }
 
-func TestGrib_ReadSection(t *testing.T) {
+func TestGrib_ReadSection_SimplePacking(t *testing.T) {
 	f, err := os.Open("../testdata/temp.grib2")
 	require.NoError(t, err)
 
@@ -103,16 +103,16 @@ func TestGrib_ReadSection(t *testing.T) {
 				assertSection3(t, sec, &gdt.Template0{
 					Template0FixedPart: gdt.Template0FixedPart{
 						ShapeOfTheEarth:                        6,
-						ScaleFactorOfRadiusOfSphericalEarth:    255,
-						ScaledValueOfRadiusOfSphericalEarth:    4294967295,
-						ScaleFactorOfEarthMajorAxis:            255,
-						ScaledValueOfEarthMajorAxis:            4294967295,
-						ScaleFactorOfEarthMinorAxis:            255,
-						ScaledValueOfEarthMinorAxis:            4294967295,
+						ScaleFactorOfRadiusOfSphericalEarth:    -1,
+						ScaledValueOfRadiusOfSphericalEarth:    -1,
+						ScaleFactorOfEarthMajorAxis:            -1,
+						ScaledValueOfEarthMajorAxis:            -1,
+						ScaleFactorOfEarthMinorAxis:            -1,
+						ScaledValueOfEarthMinorAxis:            -1,
 						Ni:                                     363,
 						Nj:                                     373,
 						BasicAngleOfTheInitialProductionDomain: 0,
-						SubdivisionsOfBasicAngle:               4294967295,
+						SubdivisionsOfBasicAngle:               -1,
 						LatitudeOfFirstGridPoint:               33046875,
 						LongitudeOfFirstGridPoint:              346007813,
 						ResolutionAndComponentFlags:            48,
@@ -133,18 +133,18 @@ func TestGrib_ReadSection(t *testing.T) {
 					ParameterCategory:               0,
 					ParameterNumber:                 0,
 					TypeOfGeneratingProcess:         2,
-					BackgroundProcess:               255,
-					GeneratingProcessIdentifier:     255,
-					HoursAfterDataCutoff:            65535,
-					MinutesAfterDataCutoff:          255,
+					BackgroundProcess:               -1,
+					GeneratingProcessIdentifier:     -1,
+					HoursAfterDataCutoff:            -1,
+					MinutesAfterDataCutoff:          -1,
 					IndicatorOfUnitOfTimeRange:      1,
 					ForecastTime:                    0,
 					TypeOfFirstFixedSurface:         1,
-					ScaleFactorOfFirstFixedSurface:  255,
-					ScaledValueOfFirstFixedSurface:  4294967295,
-					TypeOfSecondFixedSurface:        255,
-					ScaleFactorOfSecondFixedSurface: 255,
-					ScaledValueOfSecondFixedSurface: 4294967295,
+					ScaleFactorOfFirstFixedSurface:  -1,
+					ScaledValueOfFirstFixedSurface:  -1,
+					TypeOfSecondFixedSurface:        -1,
+					ScaleFactorOfSecondFixedSurface: -1,
+					ScaledValueOfSecondFixedSurface: -1,
 				})
 			},
 		},
@@ -153,12 +153,10 @@ func TestGrib_ReadSection(t *testing.T) {
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 5, 21)
 				assertSection5(t, sec, &gridpoint.SimplePacking{
-					DefSimplePacking: &gridpoint.DefSimplePacking{
-						R:    float32(0.0194875),
-						E:    scale.Factor(32786),
-						D:    scale.Factor(32772),
-						Bits: 12,
-					},
+					R:    0.0194875,
+					E:    -18,
+					D:    -4,
+					Bits: 12,
 				})
 			},
 		},
@@ -203,7 +201,145 @@ func TestGrib_ReadSection(t *testing.T) {
 	}
 }
 
-func TestSection7_ReadData(t *testing.T) {
+func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
+	f, err := os.Open("../testdata/hpbl.grib2")
+	require.NoError(t, err)
+
+	g := grib.NewGrib2(f)
+
+	tests := []struct {
+		name string
+		test func(t *testing.T, sec grib2.Section)
+		err  error
+	}{
+		{
+			name: "section 0",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 0, 16)
+				assertSection0(t, sec, 2, 0, 1476981)
+			},
+		},
+		{
+			name: "section 1",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 1, 21)
+				assertSection1(t, sec, "2024-08-20T12:00:00Z")
+			},
+		},
+		{
+			name: "section 3",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 3, 72)
+
+				tpl := gdt.Template0FixedPart{
+					ShapeOfTheEarth:             6,
+					Ni:                          1440,
+					Nj:                          721,
+					SubdivisionsOfBasicAngle:    -1,
+					LatitudeOfFirstGridPoint:    90000000,
+					LongitudeOfFirstGridPoint:   0,
+					ResolutionAndComponentFlags: 48,
+					LatitudeOfLastGridPoint:     -90000000,
+					LongitudeOfLastGridPoint:    359750000,
+					IDirectionIncrement:         250000,
+					JDirectionIncrement:         250000,
+				}
+				assertSection3(t, sec, &gdt.Template0{
+					Template0FixedPart: tpl,
+				})
+
+				assert.Equal(t, true, regulation.IsMissingValue(tpl.SubdivisionsOfBasicAngle))
+			},
+		},
+		{
+			name: "section 4",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 4, 34)
+				assertSection4(t, sec, &pdt.Template0{
+					ParameterCategory:               3,
+					ParameterNumber:                 196,
+					TypeOfGeneratingProcess:         2,
+					BackgroundProcess:               0,
+					GeneratingProcessIdentifier:     96,
+					HoursAfterDataCutoff:            0,
+					MinutesAfterDataCutoff:          0,
+					IndicatorOfUnitOfTimeRange:      1,
+					ForecastTime:                    44,
+					TypeOfFirstFixedSurface:         1,
+					ScaleFactorOfFirstFixedSurface:  0,
+					ScaledValueOfFirstFixedSurface:  0,
+					TypeOfSecondFixedSurface:        -1,
+					ScaleFactorOfSecondFixedSurface: 0,
+					ScaledValueOfSecondFixedSurface: 0,
+				})
+			},
+		},
+		{
+			name: "section 5",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 5, 49)
+				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
+					ComplexPacking: &gridpoint.ComplexPacking{
+						SimplePacking:              &gridpoint.SimplePacking{R: 772.85974, E: 3, D: 2, Bits: 17},
+						GroupMethod:                1,
+						MissingValue:               0,
+						PrimaryMissingSubstitute:   1649987994,
+						SecondaryMissingSubstitute: -1,
+						NumberOfGroups:             30736,
+						GroupWidths:                0,
+						GroupWidthsBits:            5,
+						GroupLengthsReference:      1,
+						GroupLengthIncrement:       1,
+						GroupLastLength:            41,
+						GroupScaledLengthsBits:     7,
+					},
+					SpatialOrderDifference: 2,
+					OctetsNumber:           3,
+				})
+			},
+		},
+		{
+			name: "section 6",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 6, 6)
+			},
+		},
+		{
+			name: "section 7",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 7, 1476779)
+			},
+		},
+		{
+			name: "section 8",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 8, 4)
+			},
+		},
+		{
+			name: "eof",
+			test: func(t *testing.T, sec grib2.Section) {
+				assert.Nil(t, sec)
+			},
+			err: io.EOF,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t2 *testing.T) {
+			sec, err := g.ReadSection()
+			if tt.err == nil {
+				require.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tt.err)
+			}
+
+			tt.test(t2, sec)
+		})
+	}
+}
+
+func TestSection7_ReadData_SimplePacking(t *testing.T) {
 	f, err := os.Open("../testdata/temp.grib2")
 	require.NoError(t, err)
 
@@ -249,6 +385,59 @@ func TestSection7_ReadData(t *testing.T) {
 		2.9649853706e+02, 2.9688000679e+02, 2.9649853706e+02, 2.9699444771e+02, 2.9562115669e+02, 2.9550671577e+02, 2.9588818550e+02, 2.9989361763e+02,
 		2.9848217964e+02, 3.0023694038e+02, 3.0126690865e+02, 3.0088543892e+02, 3.0023694038e+02, 2.9962658882e+02, 2.9825329781e+02, 2.9726147652e+02,
 		2.9699444771e+02, 2.9699444771e+02, 2.9726147652e+02, 2.9649853706e+02,
+	}
+
+	for i, v := range exampleValues {
+		assert.InDelta(t, v, data[i], 1e-8)
+	}
+}
+
+func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
+	f, err := os.Open("../testdata/hpbl.grib2")
+	require.NoError(t, err)
+
+	g := grib.NewGrib2(f)
+
+	var sec7 grib2.Section7
+	var tpl drt.Template
+	var dataLen int
+
+	for {
+		sec, err := g.ReadSection()
+		require.NoError(t, err)
+
+		if sec.Number() == 5 {
+			tpl = sec.(grib2.Section5).GetDataRepresentationTemplate()
+			dataLen = sec.(grib2.Section5).GetNumberOfValues()
+		}
+
+		if sec.Number() == 7 {
+			sec7 = sec.(grib2.Section7)
+
+			break
+		}
+	}
+
+	data, err := sec7.GetData(tpl)
+	require.NoError(t, err)
+	require.NotZero(t, dataLen)
+	require.Equal(t, dataLen, len(data))
+
+	// grib_dump -O pkg/testdata/hpbl.grib2
+	exampleValues := []float64{
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
+		3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02, 3.2348859741e+02,
 	}
 
 	for i, v := range exampleValues {

@@ -8,8 +8,6 @@ import (
 	"sync"
 )
 
-var gribLiteral = []byte{'G', 'R', 'I', 'B'}
-
 type SectionReader interface {
 	ReadSection() (*GribSection, error)
 }

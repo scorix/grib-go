@@ -2,7 +2,6 @@ package grib2
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 
 	"github.com/scorix/grib-go/pkg/grib2/definition"
@@ -19,11 +18,11 @@ type section4 struct {
 }
 
 func (s *section4) Length() int {
-	return int(s.Section4Length)
+	return int(s.Section4.Section4Length)
 }
 
 func (s *section4) Number() int {
-	return int(s.NumberOfSection)
+	return int(s.Section4.NumberOfSection)
 }
 
 func (s *section4) readFrom(r io.Reader) error {
@@ -31,20 +30,16 @@ func (s *section4) readFrom(r io.Reader) error {
 		return err
 	}
 
-	switch n := s.Section4.ProductDefinitionTemplateNumber; n {
-	case 0:
-		s.ProductDefinitionTemplate = &pdt.Template0{}
-
-	case 255:
-		return nil
-
-	default:
-		return fmt.Errorf("unsupported product definition template: %d", n)
+	tpl, err := pdt.ReadTemplate(r, s.Section4.ProductDefinitionTemplateNumber)
+	if err != nil {
+		return err
 	}
 
-	return binary.Read(r, binary.BigEndian, s.ProductDefinitionTemplate)
+	s.Section4.ProductDefinitionTemplate = tpl
+
+	return nil
 }
 
 func (s *section4) GetProductDefinitionTemplate() pdt.Template {
-	return s.ProductDefinitionTemplate
+	return s.Section4.ProductDefinitionTemplate
 }

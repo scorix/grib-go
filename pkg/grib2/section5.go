@@ -7,7 +7,6 @@ import (
 
 	"github.com/scorix/grib-go/pkg/grib2/definition"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
-	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 )
 
 type Section5 interface {
@@ -21,11 +20,11 @@ type section5 struct {
 }
 
 func (s *section5) Length() int {
-	return int(s.Section5Length)
+	return int(s.Section5.Section5Length)
 }
 
 func (s *section5) Number() int {
-	return int(s.NumberOfSection)
+	return int(s.Section5.NumberOfSection)
 }
 
 func (s *section5) readFrom(r io.Reader) error {
@@ -33,39 +32,20 @@ func (s *section5) readFrom(r io.Reader) error {
 		return fmt.Errorf("read: %w", err)
 	}
 
-	if err := s.readTemplate(r); err != nil {
+	tpl, err := drt.ReadTemplate(r, s.Section5.DataRepresentationTemplateNumber)
+	if err != nil {
 		return fmt.Errorf("read template: %w", err)
 	}
+
+	s.Section5.DataRepresentationTemplate = tpl
 
 	return nil
 }
 
-func (s *section5) readTemplate(r io.Reader) error {
-	switch s.DataRepresentationTemplateNumber {
-	case definition.GridPointDataSimplePacking:
-		var tplDef gridpoint.DefSimplePacking
-
-		if err := binary.Read(r, binary.BigEndian, &tplDef); err != nil {
-			return err
-		}
-
-		s.DataRepresentationTemplate = gridpoint.NewSimplePacking(tplDef)
-
-		return nil
-
-	case definition.MatrixValueAtGridPointSimplePacking:
-
-	case definition.GridPointDataComplexPacking:
-
-	}
-
-	return fmt.Errorf("unsupported data template: %d", s.DataRepresentationTemplateNumber)
-}
-
 func (s *section5) GetDataRepresentationTemplate() drt.Template {
-	return s.DataRepresentationTemplate
+	return s.Section5.DataRepresentationTemplate
 }
 
 func (s *section5) GetNumberOfValues() int {
-	return int(s.NumberOfValues)
+	return int(s.Section5.NumberOfValues)
 }

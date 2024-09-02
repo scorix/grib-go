@@ -1,5 +1,9 @@
 package gdt
 
+import (
+	"github.com/scorix/grib-go/pkg/grib2/regulation"
+)
+
 /*
 Notes:
 1.  Basic angle of the initial production domain and subdivisions of this basic angle are provided to manage cases where the recommended unit of 10-6 degrees is not applicable to describe the extreme longitudes and latitudes, and direction increments. For these last six descriptors, the unit is equal to the ratio of the basic angle and the subdivisions number. For ordinary cases, zero and missing values should be coded, equivalent to respective values of 1 and 106  (10-6  degrees unit).
@@ -20,7 +24,7 @@ type Template0 struct {
 	// TODO: 73-nn: List of number of points along each meridian or parallel (These octets are only present for quasi-regular grids as described in notes 2 and 3)
 }
 
-type Template0FixedPart struct {
+type template0FixedPart struct {
 	ShapeOfTheEarth                        uint8
 	ScaleFactorOfRadiusOfSphericalEarth    uint8
 	ScaledValueOfRadiusOfSphericalEarth    uint32
@@ -40,4 +44,50 @@ type Template0FixedPart struct {
 	IDirectionIncrement                    uint32
 	JDirectionIncrement                    uint32
 	ScanningMode                           uint8
+}
+
+func (t template0FixedPart) Export() Template0FixedPart {
+	return Template0FixedPart{
+		ShapeOfTheEarth:                        regulation.ToInt8(t.ShapeOfTheEarth),
+		ScaleFactorOfRadiusOfSphericalEarth:    regulation.ToInt8(t.ScaleFactorOfRadiusOfSphericalEarth),
+		ScaledValueOfRadiusOfSphericalEarth:    regulation.ToInt32(t.ScaledValueOfRadiusOfSphericalEarth),
+		ScaleFactorOfEarthMajorAxis:            regulation.ToInt8(t.ScaleFactorOfEarthMajorAxis),
+		ScaledValueOfEarthMajorAxis:            regulation.ToInt32(t.ScaledValueOfEarthMajorAxis),
+		ScaleFactorOfEarthMinorAxis:            regulation.ToInt8(t.ScaleFactorOfEarthMinorAxis),
+		ScaledValueOfEarthMinorAxis:            regulation.ToInt32(t.ScaledValueOfEarthMinorAxis),
+		Ni:                                     regulation.ToInt32(t.Ni),
+		Nj:                                     regulation.ToInt32(t.Nj),
+		BasicAngleOfTheInitialProductionDomain: regulation.ToInt32(t.BasicAngleOfTheInitialProductionDomain),
+		SubdivisionsOfBasicAngle:               regulation.ToInt32(t.SubdivisionsOfBasicAngle),
+		LatitudeOfFirstGridPoint:               regulation.ToInt32(t.LatitudeOfFirstGridPoint),
+		LongitudeOfFirstGridPoint:              regulation.ToInt32(t.LongitudeOfFirstGridPoint),
+		ResolutionAndComponentFlags:            regulation.ToInt8(t.ResolutionAndComponentFlags),
+		LatitudeOfLastGridPoint:                regulation.ToInt32(t.LatitudeOfLastGridPoint),
+		LongitudeOfLastGridPoint:               regulation.ToInt32(t.LongitudeOfLastGridPoint),
+		IDirectionIncrement:                    regulation.ToInt32(t.IDirectionIncrement),
+		JDirectionIncrement:                    regulation.ToInt32(t.JDirectionIncrement),
+		ScanningMode:                           regulation.ToInt8(t.ScanningMode),
+	}
+}
+
+type Template0FixedPart struct {
+	ShapeOfTheEarth                        int8
+	ScaleFactorOfRadiusOfSphericalEarth    int8
+	ScaledValueOfRadiusOfSphericalEarth    int32
+	ScaleFactorOfEarthMajorAxis            int8
+	ScaledValueOfEarthMajorAxis            int32
+	ScaleFactorOfEarthMinorAxis            int8
+	ScaledValueOfEarthMinorAxis            int32
+	Ni                                     int32
+	Nj                                     int32
+	BasicAngleOfTheInitialProductionDomain int32
+	SubdivisionsOfBasicAngle               int32
+	LatitudeOfFirstGridPoint               int32
+	LongitudeOfFirstGridPoint              int32
+	ResolutionAndComponentFlags            int8
+	LatitudeOfLastGridPoint                int32
+	LongitudeOfLastGridPoint               int32
+	IDirectionIncrement                    int32
+	JDirectionIncrement                    int32
+	ScanningMode                           int8
 }

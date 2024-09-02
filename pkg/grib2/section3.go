@@ -2,7 +2,6 @@ package grib2
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 
 	"github.com/scorix/grib-go/pkg/grib2/definition"
@@ -19,11 +18,11 @@ type section3 struct {
 }
 
 func (s *section3) Length() int {
-	return int(s.Section3Length)
+	return int(s.Section3.Section3Length)
 }
 
 func (s *section3) Number() int {
-	return int(s.NumberOfSection)
+	return int(s.Section3.NumberOfSection)
 }
 
 func (s *section3) readFrom(r io.Reader) error {
@@ -31,25 +30,16 @@ func (s *section3) readFrom(r io.Reader) error {
 		return err
 	}
 
-	switch n := s.Section3.GridDefinitionTemplateNumber; n {
-	case 0:
-		var tpl gdt.Template0
-		if err := binary.Read(r, binary.BigEndian, &tpl.Template0FixedPart); err != nil {
-			return err
-		}
-
-		s.GridDefinitionTemplate = &tpl
-
-		return nil
-
-	case 255:
-		return nil
-
-	default:
-		return fmt.Errorf("unsupported grid definition template: %d", n)
+	tpl, err := gdt.ReadTemplate(r, s.Section3.GridDefinitionTemplateNumber)
+	if err != nil {
+		return err
 	}
+
+	s.Section3.GridDefinitionTemplate = tpl
+
+	return nil
 }
 
 func (s *section3) GetGridDefinitionTemplate() gdt.Template {
-	return s.GridDefinitionTemplate
+	return s.Section3.GridDefinitionTemplate
 }

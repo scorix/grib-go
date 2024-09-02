@@ -17,11 +17,11 @@ type section2 struct {
 }
 
 func (s *section2) Length() int {
-	return int(s.Section2Length)
+	return int(s.Section2.Section2Length)
 }
 
 func (s *section2) Number() int {
-	return int(s.NumberOfSection)
+	return int(s.Section2.NumberOfSection)
 }
 
 func (s *section2) readFrom(r io.Reader) error {
@@ -35,7 +35,7 @@ func (s *section2) readFrom(r io.Reader) error {
 		return err
 	}
 
-	s.Local = buf.Bytes()
+	s.Section2.Local = buf.Bytes()
 
 	return nil
 }

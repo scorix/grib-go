@@ -16,11 +16,11 @@ type section6 struct {
 }
 
 func (s *section6) Length() int {
-	return int(s.Section6Length)
+	return int(s.Section6.Section6Length)
 }
 
 func (s *section6) Number() int {
-	return int(s.NumberOfSection)
+	return int(s.Section6.NumberOfSection)
 }
 
 func (s *section6) readFrom(r io.Reader) error {
