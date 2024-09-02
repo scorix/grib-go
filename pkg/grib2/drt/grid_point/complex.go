@@ -2,9 +2,9 @@ package gridpoint
 
 import (
 	"fmt"
-	"io"
+	"math"
 
-	"github.com/icza/bitio"
+	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 )
@@ -12,8 +12,8 @@ import (
 type ComplexPacking struct {
 	*SimplePacking
 
-	GroupMethod                int8
-	MissingValue               int8
+	GroupSplittingMethodUsed   int8
+	MissingValueManagementUsed int8
 	PrimaryMissingSubstitute   int32
 	SecondaryMissingSubstitute int32
 	NumberOfGroups             int32
@@ -23,8 +23,8 @@ type ComplexPacking struct {
 func NewComplexPacking(def definition.ComplexPacking, numVals int) *ComplexPacking {
 	return &ComplexPacking{
 		SimplePacking:              NewSimplePacking(def.SimplePacking, numVals),
-		GroupMethod:                regulation.ToInt8(def.GroupMethod),
-		MissingValue:               regulation.ToInt8(def.MissingValue),
+		GroupSplittingMethodUsed:   regulation.ToInt8(def.GroupSplittingMethodUsed),
+		MissingValueManagementUsed: regulation.ToInt8(def.MissingValueManagementUsed),
 		PrimaryMissingSubstitute:   regulation.ToInt32(def.PrimaryMissingSubstitute),
 		SecondaryMissingSubstitute: regulation.ToInt32(def.SecondaryMissingSubstitute),
 		NumberOfGroups:             regulation.ToInt32(def.NumberOfGroups),
@@ -40,7 +40,7 @@ func NewComplexPacking(def definition.ComplexPacking, numVals int) *ComplexPacki
 }
 
 func (cp *ComplexPacking) missingValueSubstitute() (float64, float64, error) {
-	switch cp.MissingValue {
+	switch cp.MissingValueManagementUsed {
 	case 0, -1:
 		return 0, 0, nil
 	case 1:
@@ -52,25 +52,25 @@ func (cp *ComplexPacking) missingValueSubstitute() (float64, float64, error) {
 	return 0, 0, fmt.Errorf("unimplemented")
 }
 
-func (cp *ComplexPacking) unpackData(r *bitio.Reader, groups []group) ([]float64, error) {
+type scaleGroupDataFunc func(data []uint32, missing []uint32, primary float64, secondary float64, scaleFunc func(uint32) float64) ([]float64, error)
+
+func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []group, f scaleGroupDataFunc) ([]float64, error) {
+	data := make([]uint32, cp.numVals)
+	miss := make([]uint32, 0, cp.numVals)
+	idx := 0
+
 	primary, secondary, err := cp.missingValueSubstitute()
 	if err != nil {
 		return nil, err
 	}
 
-	data := make([]float64, cp.numVals)
-	ifldmiss := make([]uint32, 0, cp.numVals)
-	s7i := 0
-
-	scale := cp.ScaleFunc()
-
 	for _, g := range groups {
 		groupData, err := g.readData(r)
 		if err != nil {
-			return nil, fmt.Errorf("read (%d) data: %w", s7i, err)
+			return nil, fmt.Errorf("read (%d) data: %w", idx, err)
 		}
 
-		if s7i+1 > cp.numVals {
+		if idx+1 > cp.numVals {
 			return nil, fmt.Errorf("got more than %d values", cp.numVals)
 		}
 
@@ -81,56 +81,49 @@ func (cp *ComplexPacking) unpackData(r *bitio.Reader, groups []group) ([]float64
 
 		missingValues := []uint32{1<<missingValueBits - 1, 1<<missingValueBits - 2}
 
-		switch cp.MissingValue {
+		switch cp.MissingValueManagementUsed {
 		case 0:
-			ifldmiss = append(ifldmiss, make([]uint32, len(groupData))...)
-			for _, d := range groupData {
-				data[s7i] = scale(g.ref + d)
-				s7i++
+			miss = append(miss, make([]uint32, len(groupData))...)
+			for i := range groupData {
+				groupData[i] += g.ref
 			}
 
 		case 1:
-			for _, d := range groupData {
+			for i := range groupData {
 				if g.ref == missingValues[0] {
-					data[s7i] = primary
-					s7i++
-					ifldmiss = append(ifldmiss, 1)
+					groupData[i] = math.MaxUint32
+					miss = append(miss, 1)
 				} else {
-					data[s7i] = scale(g.ref + d)
-					s7i++
-					ifldmiss = append(ifldmiss, 0)
+					groupData[i] += g.ref
+					miss = append(miss, 0)
 				}
 			}
 
 		case 2:
-			for _, d := range groupData {
+			for i := range groupData {
 				if g.ref == missingValues[0] || g.ref == missingValues[1] {
-					data[s7i] = secondary
-					s7i++
+					groupData[i] = math.MaxUint32
 
 					if g.ref == missingValues[0] {
-						ifldmiss = append(ifldmiss, 1)
+						miss = append(miss, 1)
 					} else {
-						ifldmiss = append(ifldmiss, 2)
+						miss = append(miss, 2)
 					}
 				} else {
-					data[s7i] = scale(g.ref + d)
-					s7i++
-					ifldmiss = append(ifldmiss, 0)
+					groupData[i] += g.ref
+					miss = append(miss, 0)
 				}
 			}
-
 		}
+
+		idx += copy(data[idx:], groupData)
 	}
 
-	return data, nil
+	return f(data, miss, primary, secondary, cp.ScaleFunc())
 }
 
-// ReadAllData parses data2 struct from the reader into the an array of floating-point values
-func (cp *ComplexPacking) ReadAllData(r io.Reader) ([]float64, error) {
-	br := bitio.NewReader(r)
-
-	groups, err := cp.readGroups(br)
+func (cp *ComplexPacking) ReadAllData(r datapacking.BitReader) ([]float64, error) {
+	groups, err := cp.readGroups(r)
 	if err != nil {
 		return nil, fmt.Errorf("read groups: %w", err)
 	}
@@ -139,13 +132,34 @@ func (cp *ComplexPacking) ReadAllData(r io.Reader) ([]float64, error) {
 		return nil, fmt.Errorf("expected groups: %d, got %d", cp.NumberOfGroups, len(groups))
 	}
 
-	return cp.unpackData(br, groups)
+	return cp.unpackData(r, groups, cp.scaleValues)
 }
 
-type bitGroupParameter struct {
-	GroupLengthsReference uint64
-	GroupWidths           uint64
-	GroupLastLength       uint64
+func (cp *ComplexPacking) scaleValues(data []uint32, miss []uint32, primary float64, secondary float64, scaleFunc func(uint32) float64) ([]float64, error) {
+	values := make([]float64, len(data))
+
+	switch cp.MissingValueManagementUsed {
+	case 0:
+		// no missing values
+		for n, dataValue := range data {
+			values[n] = scaleFunc(dataValue)
+		}
+
+	case 1, 2:
+		// missing values included
+		for n, dataValue := range data {
+			switch miss[n] {
+			case 0:
+				values[n] = scaleFunc(dataValue)
+			case 1:
+				values[n] = primary
+			case 2:
+				values[n] = secondary
+			}
+		}
+	}
+
+	return values, nil
 }
 
 type Group struct {
@@ -157,7 +171,7 @@ type Group struct {
 	ScaledLengthsBits uint8
 }
 
-func (cp *ComplexPacking) readGroups(r *bitio.Reader) ([]group, error) {
+func (cp *ComplexPacking) readGroups(r datapacking.BitReader) ([]group, error) {
 	references := make([]uint32, cp.NumberOfGroups)
 	for n := range cp.NumberOfGroups {
 		b, err := r.ReadBits(cp.Bits)
@@ -167,6 +181,8 @@ func (cp *ComplexPacking) readGroups(r *bitio.Reader) ([]group, error) {
 
 		references[n] = uint32(b)
 	}
+
+	r.Align()
 
 	widths := make([]uint8, cp.NumberOfGroups)
 	for n := range cp.NumberOfGroups {
@@ -182,6 +198,8 @@ func (cp *ComplexPacking) readGroups(r *bitio.Reader) ([]group, error) {
 		widths[n] = uint8(b) + cp.Group.Widths
 	}
 
+	r.Align()
+
 	lengths := make([]uint64, cp.NumberOfGroups)
 	for n := range cp.NumberOfGroups {
 		b, err := r.ReadBits(cp.Group.ScaledLengthsBits)
@@ -191,6 +209,8 @@ func (cp *ComplexPacking) readGroups(r *bitio.Reader) ([]group, error) {
 
 		lengths[n] = b*uint64(cp.Group.LengthIncrement) + uint64(cp.Group.LengthsReference)
 	}
+
+	r.Align()
 
 	lengths[cp.NumberOfGroups-1] = uint64(cp.Group.LastLength)
 
@@ -205,8 +225,6 @@ func (cp *ComplexPacking) readGroups(r *bitio.Reader) ([]group, error) {
 		groups[n] = g
 	}
 
-	r.Align()
-
 	return groups, nil
 }
 
@@ -216,7 +234,7 @@ type group struct {
 	width  uint8
 }
 
-func (g *group) readData(r *bitio.Reader) ([]uint32, error) {
+func (g *group) readData(r datapacking.BitReader) ([]uint32, error) {
 	data := make([]uint32, g.length)
 
 	if g.width == 0 {

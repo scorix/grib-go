@@ -1,7 +1,5 @@
 package regulation
 
-import "math"
-
 /*
 92.1 General
 
@@ -42,69 +40,42 @@ L * 10F = V
 
 // 92.1.5
 func ToInt8(v uint8) int8 {
-	if IsMissingValue(v) {
-		return int8(v)
-	}
-
-	i := int8(v & 0x7f)
-
-	if negtive := v&0x80 > 0; negtive {
-		return -i
-	}
-
-	return i
+	return int8(ToInt(int(v), 8))
 }
 
 func ToInt16(v uint16) int16 {
-	if IsMissingValue(v) {
-		return int16(v)
-	}
-
-	i := int16(v & 0x7fff)
-
-	if negtive := v&0x8000 > 0; negtive {
-		return -i
-	}
-
-	return i
+	return int16(ToInt(int(v), 16))
 }
 
 func ToInt32(v uint32) int32 {
-	if IsMissingValue(v) {
-		return int32(v)
+	return int32(ToInt(int(v), 32))
+}
+
+func ToInt(v int, bits int) int {
+	if IsMissingValue(uint(v), bits) {
+		return int(v)
 	}
 
-	i := int32(v & 0x7fffffff)
-
-	if negtive := v&0x80000000 > 0; negtive {
-		return -i
+	var flag int = 1
+	for range bits - 1 {
+		flag = flag << 1
 	}
 
-	return i
+	if negtive := v&flag > 0; negtive {
+		return -(v & (flag - 1))
+	}
+
+	return v & (flag - 1)
 }
 
 // 92.1.4
-func IsMissingValue(value any) bool {
-	switch v := value.(type) {
-	case int8:
-		return uint8(v) == math.MaxUint8
-	case uint8:
-		return v == math.MaxUint8
-	case int16:
-		return uint16(v) == math.MaxUint16
-	case uint16:
-		return v == math.MaxUint16
-	case int32:
-		return uint32(v) == math.MaxUint32
-	case uint32:
-		return v == math.MaxUint32
-	case int64:
-		return uint64(v) == math.MaxUint64
-	case uint64:
-		return v == math.MaxUint64
+func IsMissingValue(value uint, bits int) bool {
+	var missing uint = 1
+	for range bits {
+		missing = missing << 1
 	}
 
-	return false
+	return missing-1 == value&(missing-1)
 }
 
 // 92.1.6

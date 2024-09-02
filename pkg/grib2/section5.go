@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/icza/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/definition"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
 )
@@ -32,7 +33,7 @@ func (s *section5) readFrom(r io.Reader) error {
 		return fmt.Errorf("read: %w", err)
 	}
 
-	tpl, err := drt.ReadTemplate(r, s.Section5.DataRepresentationTemplateNumber, int(s.Section5.NumberOfValues))
+	tpl, err := drt.ReadTemplate(bitio.NewReader(r), s.Section5.DataRepresentationTemplateNumber, int(s.Section5.NumberOfValues))
 	if err != nil {
 		return fmt.Errorf("read template: %w", err)
 	}

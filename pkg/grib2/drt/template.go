@@ -3,8 +3,8 @@ package drt
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 
+	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 )
@@ -36,10 +36,10 @@ const (
 )
 
 type Template interface {
-	ReadAllData(r io.Reader) ([]float64, error)
+	ReadAllData(r datapacking.BitReader) ([]float64, error)
 }
 
-func ReadTemplate(r io.Reader, n TemplateNumber, numVals int) (Template, error) {
+func ReadTemplate(r datapacking.BitReader, n TemplateNumber, numVals int) (Template, error) {
 	switch n {
 	case GridPointDataSimplePacking:
 		var tplDef definition.SimplePacking

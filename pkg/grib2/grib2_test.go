@@ -248,7 +248,7 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 					Template0FixedPart: tpl,
 				})
 
-				assert.Equal(t, true, regulation.IsMissingValue(tpl.SubdivisionsOfBasicAngle))
+				assert.Equal(t, true, regulation.IsMissingValue(uint(tpl.SubdivisionsOfBasicAngle), 32))
 			},
 		},
 		{
@@ -280,8 +280,8 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 				assertSection(t, sec, 5, 47)
 				assertSection5(t, sec, &gridpoint.ComplexPacking{
 					SimplePacking:              &gridpoint.SimplePacking{R: -2023.1235, E: 0, D: 2, Bits: 12},
-					GroupMethod:                1,
-					MissingValue:               0,
+					GroupSplittingMethodUsed:   1,
+					MissingValueManagementUsed: 0,
 					PrimaryMissingSubstitute:   1649987994,
 					SecondaryMissingSubstitute: -1,
 					NumberOfGroups:             2732,
@@ -384,7 +384,7 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 					Template0FixedPart: tpl,
 				})
 
-				assert.Equal(t, true, regulation.IsMissingValue(tpl.SubdivisionsOfBasicAngle))
+				assert.Equal(t, true, regulation.IsMissingValue(uint(tpl.SubdivisionsOfBasicAngle), 32))
 			},
 		},
 		{
@@ -417,8 +417,8 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
 					ComplexPacking: &gridpoint.ComplexPacking{
 						SimplePacking:              &gridpoint.SimplePacking{R: 772.85974, E: 3, D: 2, Bits: 17},
-						GroupMethod:                1,
-						MissingValue:               0,
+						GroupSplittingMethodUsed:   1,
+						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,
 						SecondaryMissingSubstitute: -1,
 						NumberOfGroups:             30736,
@@ -494,6 +494,7 @@ func TestSection7_ReadData_SimplePacking(t *testing.T) {
 		if sec.Number() == 5 {
 			tpl = sec.(grib2.Section5).GetDataRepresentationTemplate()
 			dataLen = sec.(grib2.Section5).GetNumberOfValues()
+			require.Equal(t, 135399, dataLen)
 		}
 
 		if sec.Number() == 7 {
@@ -505,7 +506,6 @@ func TestSection7_ReadData_SimplePacking(t *testing.T) {
 
 	data, err := sec7.GetData(tpl)
 	require.NoError(t, err)
-	require.NotZero(t, dataLen)
 	require.Equal(t, dataLen, len(data))
 
 	// grib_dump -O pkg/testdata/temp.grib2
@@ -547,6 +547,7 @@ func TestSection7_ReadData_ComplexPacking(t *testing.T) {
 		if sec.Number() == 5 {
 			tpl = sec.(grib2.Section5).GetDataRepresentationTemplate()
 			dataLen = sec.(grib2.Section5).GetNumberOfValues()
+			require.Equal(t, 65160, dataLen)
 		}
 
 		if sec.Number() == 7 {
@@ -558,7 +559,6 @@ func TestSection7_ReadData_ComplexPacking(t *testing.T) {
 
 	data, err := sec7.GetData(tpl)
 	require.NoError(t, err)
-	require.NotZero(t, dataLen)
 	require.Equal(t, dataLen, len(data))
 
 	// grib_dump -O pkg/testdata/hpbl.grib2
@@ -600,6 +600,7 @@ func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 		if sec.Number() == 5 {
 			tpl = sec.(grib2.Section5).GetDataRepresentationTemplate()
 			dataLen = sec.(grib2.Section5).GetNumberOfValues()
+			require.Equal(t, 1038240, dataLen)
 		}
 
 		if sec.Number() == 7 {
@@ -611,7 +612,6 @@ func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 
 	data, err := sec7.GetData(tpl)
 	require.NoError(t, err)
-	require.NotZero(t, dataLen)
 	require.Equal(t, dataLen, len(data))
 
 	// grib_dump -O pkg/testdata/hpbl.grib2
