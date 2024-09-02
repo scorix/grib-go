@@ -12,8 +12,8 @@ import (
 type ComplexPacking struct {
 	*SimplePacking
 
-	GroupMethod                int8
-	MissingValue               int8
+	GroupSplittingMethodUsed   int8
+	MissingValueManagementUsed int8
 	PrimaryMissingSubstitute   int32
 	SecondaryMissingSubstitute int32
 	NumberOfGroups             int32
@@ -23,8 +23,8 @@ type ComplexPacking struct {
 func NewComplexPacking(def definition.ComplexPacking, numVals int) *ComplexPacking {
 	return &ComplexPacking{
 		SimplePacking:              NewSimplePacking(def.SimplePacking, numVals),
-		GroupMethod:                regulation.ToInt8(def.GroupMethod),
-		MissingValue:               regulation.ToInt8(def.MissingValue),
+		GroupSplittingMethodUsed:   regulation.ToInt8(def.GroupSplittingMethodUsed),
+		MissingValueManagementUsed: regulation.ToInt8(def.MissingValueManagementUsed),
 		PrimaryMissingSubstitute:   regulation.ToInt32(def.PrimaryMissingSubstitute),
 		SecondaryMissingSubstitute: regulation.ToInt32(def.SecondaryMissingSubstitute),
 		NumberOfGroups:             regulation.ToInt32(def.NumberOfGroups),
@@ -40,7 +40,7 @@ func NewComplexPacking(def definition.ComplexPacking, numVals int) *ComplexPacki
 }
 
 func (cp *ComplexPacking) missingValueSubstitute() (float64, float64, error) {
-	switch cp.MissingValue {
+	switch cp.MissingValueManagementUsed {
 	case 0, -1:
 		return 0, 0, nil
 	case 1:
@@ -81,7 +81,7 @@ func (cp *ComplexPacking) unpackData(r *bitio.Reader, groups []group) ([]float64
 
 		missingValues := []uint32{1<<missingValueBits - 1, 1<<missingValueBits - 2}
 
-		switch cp.MissingValue {
+		switch cp.MissingValueManagementUsed {
 		case 0:
 			ifldmiss = append(ifldmiss, make([]uint32, len(groupData))...)
 			for _, d := range groupData {

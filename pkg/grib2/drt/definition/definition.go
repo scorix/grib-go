@@ -13,8 +13,8 @@ type SimplePacking struct {
 type ComplexPacking struct {
 	SimplePacking
 
-	GroupMethod                uint8
-	MissingValue               uint8
+	GroupSplittingMethodUsed   uint8
+	MissingValueManagementUsed uint8
 	PrimaryMissingSubstitute   uint32
 	SecondaryMissingSubstitute uint32
 	NumberOfGroups             uint32

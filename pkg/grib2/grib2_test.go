@@ -280,8 +280,8 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 				assertSection(t, sec, 5, 47)
 				assertSection5(t, sec, &gridpoint.ComplexPacking{
 					SimplePacking:              &gridpoint.SimplePacking{R: -2023.1235, E: 0, D: 2, Bits: 12},
-					GroupMethod:                1,
-					MissingValue:               0,
+					GroupSplittingMethodUsed:   1,
+					MissingValueManagementUsed: 0,
 					PrimaryMissingSubstitute:   1649987994,
 					SecondaryMissingSubstitute: -1,
 					NumberOfGroups:             2732,
@@ -417,8 +417,8 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
 					ComplexPacking: &gridpoint.ComplexPacking{
 						SimplePacking:              &gridpoint.SimplePacking{R: 772.85974, E: 3, D: 2, Bits: 17},
-						GroupMethod:                1,
-						MissingValue:               0,
+						GroupSplittingMethodUsed:   1,
+						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,
 						SecondaryMissingSubstitute: -1,
 						NumberOfGroups:             30736,
