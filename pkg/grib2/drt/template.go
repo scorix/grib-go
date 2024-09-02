@@ -2,12 +2,9 @@ package drt
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 
-	"github.com/icza/bitio"
-	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 )
@@ -39,33 +36,10 @@ const (
 )
 
 type Template interface {
-	datapacking.UnpackReader
+	ReadAllData(r io.Reader) ([]float64, error)
 }
 
-func ReadAllData(pr Template, r io.Reader) ([]float64, error) {
-	var (
-		br        = bitio.NewReader(r)
-		values    []float64
-		scaleFunc = pr.ScaleFunc()
-	)
-
-	for {
-		bitsVal, err := br.ReadBits(pr.GetBits())
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		values = append(values, scaleFunc(uint32(bitsVal)))
-	}
-
-	return values, nil
-}
-
-func ReadTemplate(r io.Reader, n TemplateNumber) (Template, error) {
+func ReadTemplate(r io.Reader, n TemplateNumber, numVals int) (Template, error) {
 	switch n {
 	case GridPointDataSimplePacking:
 		var tplDef definition.SimplePacking
@@ -74,7 +48,7 @@ func ReadTemplate(r io.Reader, n TemplateNumber) (Template, error) {
 			return nil, err
 		}
 
-		return gridpoint.NewSimplePacking(tplDef), nil
+		return gridpoint.NewSimplePacking(tplDef, numVals), nil
 
 	case GridPointDataComplexPacking:
 		var tplDef definition.ComplexPacking
@@ -83,7 +57,7 @@ func ReadTemplate(r io.Reader, n TemplateNumber) (Template, error) {
 			return nil, err
 		}
 
-		return gridpoint.NewComplexPacking(tplDef), nil
+		return gridpoint.NewComplexPacking(tplDef, numVals), nil
 
 	case GridPointDataComplexPackingAndSpatialDifferencing:
 		var tplDef definition.ComplexPackingAndSpatialDifferencing
@@ -92,7 +66,7 @@ func ReadTemplate(r io.Reader, n TemplateNumber) (Template, error) {
 			return nil, err
 		}
 
-		return gridpoint.NewComplexPackingAndSpatialDifferencing(tplDef), nil
+		return gridpoint.NewComplexPackingAndSpatialDifferencing(tplDef, numVals), nil
 
 	}
 

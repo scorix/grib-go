@@ -5,7 +5,6 @@ import (
 	"math"
 	"testing"
 
-	"github.com/scorix/grib-go/pkg/grib2/drt"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,7 +27,7 @@ func TestSimpleScale(t *testing.T) {
 
 	b1, b2 := uint8(v>>4&0xff), uint8((v&0x0f)<<4)
 
-	values, err := drt.ReadAllData(&sp, bytes.NewReader([]byte{b1, b2}))
+	values, err := sp.ReadAllData(bytes.NewReader([]byte{b1, b2}))
 	require.NoError(t, err)
 	assert.Equal(t, float32(2.9611706734e+02), float32(values[0]))
 }

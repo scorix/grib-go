@@ -12,9 +12,9 @@ type ComplexPackingAndSpatialDifferencing struct {
 	OctetsNumber           int8
 }
 
-func NewComplexPackingAndSpatialDifferencing(def definition.ComplexPackingAndSpatialDifferencing) *ComplexPackingAndSpatialDifferencing {
+func NewComplexPackingAndSpatialDifferencing(def definition.ComplexPackingAndSpatialDifferencing, numVals int) *ComplexPackingAndSpatialDifferencing {
 	return &ComplexPackingAndSpatialDifferencing{
-		ComplexPacking:         NewComplexPacking(def.ComplexPacking),
+		ComplexPacking:         NewComplexPacking(def.ComplexPacking, numVals),
 		SpatialOrderDifference: regulation.ToInt8(def.SpatialOrderDifference),
 		OctetsNumber:           regulation.ToInt8(def.OctetsNumber),
 	}
