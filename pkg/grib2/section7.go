@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/icza/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/definition"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
 )
@@ -44,7 +45,9 @@ func (s *section7) readFrom(r io.Reader) error {
 }
 
 func (s *section7) GetData(tpl drt.Template) ([]float64, error) {
-	data, err := tpl.ReadAllData(bytes.NewReader(s.Section7.Data))
+	br := bitio.NewReader(bytes.NewReader(s.Section7.Data))
+
+	data, err := tpl.ReadAllData(br)
 	if err != nil {
 		return nil, fmt.Errorf("read data from %T: %w", tpl, err)
 	}

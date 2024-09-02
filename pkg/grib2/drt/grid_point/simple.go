@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/icza/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
@@ -35,15 +34,14 @@ func (sp *SimplePacking) ScaleFunc() func(uint32) float64 {
 	return datapacking.SimpleScaleFunc(sp.E, sp.D, sp.R)
 }
 
-func (sp *SimplePacking) ReadAllData(r io.Reader) ([]float64, error) {
+func (sp *SimplePacking) ReadAllData(r datapacking.BitReader) ([]float64, error) {
 	var (
-		br        = bitio.NewReader(r)
 		values    []float64
 		scaleFunc = sp.ScaleFunc()
 	)
 
 	for {
-		bitsVal, err := br.ReadBits(sp.Bits)
+		bitsVal, err := r.ReadBits(sp.Bits)
 		if errors.Is(err, io.EOF) {
 			break
 		}
