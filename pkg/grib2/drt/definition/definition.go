@@ -1,5 +1,6 @@
 package definition
 
+// don't edit
 type SimplePacking struct {
 	R    float32 // Reference value (R) (IEEE 32-bit floating-point value)
 	E    uint16  // Binary scale factor
@@ -8,6 +9,7 @@ type SimplePacking struct {
 	Type uint8   // Type of original field values: https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table5-1.shtml
 }
 
+// don't edit
 type ComplexPacking struct {
 	SimplePacking
 
@@ -24,6 +26,7 @@ type ComplexPacking struct {
 	GroupScaledLengthsBits     uint8
 }
 
+// don't edit
 type ComplexPackingAndSpatialDifferencing struct {
 	ComplexPacking
 

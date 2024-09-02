@@ -44,9 +44,9 @@ func (s *section7) readFrom(r io.Reader) error {
 }
 
 func (s *section7) GetData(tpl drt.Template) ([]float64, error) {
-	data, err := drt.ReadAllData(tpl, bytes.NewReader(s.Section7.Data))
+	data, err := tpl.ReadAllData(bytes.NewReader(s.Section7.Data))
 	if err != nil {
-		return nil, fmt.Errorf("read data: %w", err)
+		return nil, fmt.Errorf("read data from %T: %w", tpl, err)
 	}
 
 	return data, nil
