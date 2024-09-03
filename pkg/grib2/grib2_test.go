@@ -137,7 +137,7 @@ func TestGrib_ReadSection_SimplePacking(t *testing.T) {
 					GeneratingProcessIdentifier:     -1,
 					HoursAfterDataCutoff:            -1,
 					MinutesAfterDataCutoff:          -1,
-					IndicatorOfUnitOfTimeRange:      1,
+					IndicatorOfUnitForForecastTime:  1,
 					ForecastTime:                    0,
 					TypeOfFirstFixedSurface:         1,
 					ScaleFactorOfFirstFixedSurface:  -1,
@@ -263,7 +263,7 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 					GeneratingProcessIdentifier:     96,
 					HoursAfterDataCutoff:            0,
 					MinutesAfterDataCutoff:          0,
-					IndicatorOfUnitOfTimeRange:      1,
+					IndicatorOfUnitForForecastTime:  1,
 					ForecastTime:                    6,
 					TypeOfFirstFixedSurface:         103,
 					ScaleFactorOfFirstFixedSurface:  0,
@@ -399,7 +399,7 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 					GeneratingProcessIdentifier:     96,
 					HoursAfterDataCutoff:            0,
 					MinutesAfterDataCutoff:          0,
-					IndicatorOfUnitOfTimeRange:      1,
+					IndicatorOfUnitForForecastTime:  1,
 					ForecastTime:                    44,
 					TypeOfFirstFixedSurface:         1,
 					ScaleFactorOfFirstFixedSurface:  0,
@@ -633,5 +633,29 @@ func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 
 	for i, v := range exampleValues {
 		assert.InDelta(t, v, data[i], 1e-8)
+	}
+}
+
+func TestGrib2_ReadMessage(t *testing.T) {
+	f, err := os.Open("../testdata/hpbl.grib2")
+	require.NoError(t, err)
+
+	g := grib.NewGrib2(f)
+
+	{
+		msg, err := g.ReadMessage()
+		require.NoError(t, err)
+		require.NotNil(t, msg)
+		assert.Equal(t, 0, msg.GetDiscipline())
+		assert.Equal(t, 3, msg.GetParameterCategory())
+		assert.Equal(t, 196, msg.GetParameterNumber())
+		assert.Equal(t, "2024-08-20T12:00:00Z", msg.GetTimestamp(time.UTC).Format(time.RFC3339))
+		assert.Equal(t, "2024-08-22T08:00:00Z", msg.GetForecastTime(time.UTC).Format(time.RFC3339))
+	}
+
+	{
+		msg, err := g.ReadMessage()
+		require.ErrorIs(t, err, io.EOF)
+		assert.Nil(t, msg)
 	}
 }

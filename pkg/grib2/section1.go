@@ -13,7 +13,6 @@ import (
 type Section1 interface {
 	Section
 	GetTime(loc *time.Location) time.Time
-	GetReferenceTime() definition.ReferenceTime
 }
 
 type section1 struct {
@@ -44,8 +43,4 @@ func (s *section1) readFrom(r io.Reader) error {
 
 func (s *section1) GetTime(loc *time.Location) time.Time {
 	return time.Date(int(s.Section1.Year), time.Month(s.Section1.Month), int(s.Section1.Day), int(s.Section1.Hour), int(s.Section1.Minute), int(s.Section1.Second), 0, loc)
-}
-
-func (s *section1) GetReferenceTime() definition.ReferenceTime {
-	return s.Section1.SignificanceOfReferenceTime
 }

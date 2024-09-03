@@ -55,3 +55,37 @@ func (g *Grib2) ReadSection() (Section, error) {
 
 	return s, nil
 }
+
+func (g *Grib2) ReadMessage() (Message, error) {
+	m := &message{}
+
+	for {
+		sec, err := g.ReadSection()
+		if err != nil {
+			return nil, fmt.Errorf("read section: %w", err)
+		}
+
+		switch sec.Number() {
+		case 0:
+			m.sec0 = sec.(*section0)
+		case 1:
+			m.sec1 = sec.(*section1)
+		case 2:
+			m.sec2 = sec.(*section2)
+		case 3:
+			m.sec3 = sec.(*section3)
+		case 4:
+			m.sec4 = sec.(*section4)
+		case 5:
+			m.sec5 = sec.(*section5)
+		case 6:
+			m.sec6 = sec.(*section6)
+		case 7:
+			m.sec7 = sec.(*section7)
+		case 8:
+			m.sec8 = sec.(*section8)
+
+			return m, nil
+		}
+	}
+}
