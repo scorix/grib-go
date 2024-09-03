@@ -1,6 +1,11 @@
 package grib2
 
-import "time"
+import (
+	"bytes"
+	"time"
+
+	"github.com/icza/bitio"
+)
 
 type Message interface {
 	GetDiscipline() int
@@ -8,6 +13,8 @@ type Message interface {
 	GetParameterNumber() int
 	GetTimestamp(loc *time.Location) time.Time
 	GetForecastTime(loc *time.Location) time.Time
+	GetLevel() int
+	ReadData() ([]float64, error)
 }
 
 type message struct {
@@ -40,4 +47,14 @@ func (m message) GetTimestamp(loc *time.Location) time.Time {
 
 func (m message) GetForecastTime(loc *time.Location) time.Time {
 	return m.GetTimestamp(loc).Add(m.sec4.GetForecastDuration())
+}
+
+func (m *message) GetLevel() int {
+	return m.sec4.GetLevel()
+}
+
+func (m *message) ReadData() ([]float64, error) {
+	tpl := m.sec5.GetDataRepresentationTemplate()
+
+	return tpl.ReadAllData(bitio.NewReader(bytes.NewReader(m.sec7.Data)))
 }

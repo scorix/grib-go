@@ -5,6 +5,7 @@ go 1.22.2
 require (
 	github.com/icza/bitio v1.1.0
 	github.com/stretchr/testify v1.9.0
+	golang.org/x/sync v0.8.0
 )
 
 require (
