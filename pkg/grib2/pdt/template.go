@@ -4,11 +4,20 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"time"
 )
 
-type Template interface{}
+type Template interface {
+	GetParameterCategory() int
+	GetParameterNumber() int
+	GetForecastDuration() time.Duration
+}
 
 type MissingTemplate struct{}
+
+func (m MissingTemplate) GetParameterCategory() int          { return -1 }
+func (m MissingTemplate) GetParameterNumber() int            { return -1 }
+func (m MissingTemplate) GetForecastDuration() time.Duration { return 0 }
 
 func ReadTemplate(r io.Reader, n uint16) (Template, error) {
 	switch n {

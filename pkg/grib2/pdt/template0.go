@@ -1,6 +1,10 @@
 package pdt
 
-import "github.com/scorix/grib-go/pkg/grib2/regulation"
+import (
+	"time"
+
+	"github.com/scorix/grib-go/pkg/grib2/regulation"
+)
 
 type template0 struct {
 	ParameterCategory               uint8
@@ -10,7 +14,7 @@ type template0 struct {
 	GeneratingProcessIdentifier     uint8
 	HoursAfterDataCutoff            uint16
 	MinutesAfterDataCutoff          uint8
-	IndicatorOfUnitOfTimeRange      uint8
+	IndicatorOfUnitForForecastTime  uint8
 	ForecastTime                    uint32
 	TypeOfFirstFixedSurface         uint8
 	ScaleFactorOfFirstFixedSurface  uint8
@@ -29,7 +33,7 @@ func (t template0) Export() *Template0 {
 		GeneratingProcessIdentifier:     regulation.ToInt8(t.GeneratingProcessIdentifier),
 		HoursAfterDataCutoff:            regulation.ToInt16(t.HoursAfterDataCutoff),
 		MinutesAfterDataCutoff:          regulation.ToInt8(t.MinutesAfterDataCutoff),
-		IndicatorOfUnitOfTimeRange:      regulation.ToInt8(t.IndicatorOfUnitOfTimeRange),
+		IndicatorOfUnitForForecastTime:  IndicatorOfUnitForTime(regulation.ToInt8(t.IndicatorOfUnitForForecastTime)),
 		ForecastTime:                    regulation.ToInt32(t.ForecastTime),
 		TypeOfFirstFixedSurface:         regulation.ToInt8(t.TypeOfFirstFixedSurface),
 		ScaleFactorOfFirstFixedSurface:  regulation.ToInt8(t.ScaleFactorOfFirstFixedSurface),
@@ -48,7 +52,7 @@ type Template0 struct {
 	GeneratingProcessIdentifier     int8
 	HoursAfterDataCutoff            int16
 	MinutesAfterDataCutoff          int8
-	IndicatorOfUnitOfTimeRange      int8
+	IndicatorOfUnitForForecastTime  IndicatorOfUnitForTime
 	ForecastTime                    int32
 	TypeOfFirstFixedSurface         int8
 	ScaleFactorOfFirstFixedSurface  int8
@@ -56,4 +60,10 @@ type Template0 struct {
 	TypeOfSecondFixedSurface        int8
 	ScaleFactorOfSecondFixedSurface int8
 	ScaledValueOfSecondFixedSurface int32
+}
+
+func (t Template0) GetParameterCategory() int { return int(t.ParameterCategory) }
+func (t Template0) GetParameterNumber() int   { return int(t.ParameterNumber) }
+func (t Template0) GetForecastDuration() time.Duration {
+	return t.IndicatorOfUnitForForecastTime.AsDuration(int(t.ForecastTime))
 }
