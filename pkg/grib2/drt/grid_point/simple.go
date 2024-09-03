@@ -40,7 +40,13 @@ func (sp *SimplePacking) ReadAllData(r datapacking.BitReader) ([]float64, error)
 		scaleFunc = sp.ScaleFunc()
 	)
 
-	for {
+	if sp.Bits == 0 {
+		for range sp.numVals {
+			values = append(values, scaleFunc(0))
+		}
+	}
+
+	for sp.Bits > 0 {
 		bitsVal, err := r.ReadBits(sp.Bits)
 		if errors.Is(err, io.EOF) {
 			break

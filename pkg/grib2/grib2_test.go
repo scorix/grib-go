@@ -1,6 +1,7 @@
 package grib2_test
 
 import (
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
 func assertSection(t testing.TB, sec grib2.Section, number int, length int) {
@@ -130,21 +132,21 @@ func TestGrib_ReadSection_SimplePacking(t *testing.T) {
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 4, 34)
 				assertSection4(t, sec, &pdt.Template0{
-					ParameterCategory:               0,
-					ParameterNumber:                 0,
-					TypeOfGeneratingProcess:         2,
-					BackgroundProcess:               -1,
-					GeneratingProcessIdentifier:     -1,
-					HoursAfterDataCutoff:            -1,
-					MinutesAfterDataCutoff:          -1,
-					IndicatorOfUnitForForecastTime:  1,
-					ForecastTime:                    0,
-					TypeOfFirstFixedSurface:         1,
-					ScaleFactorOfFirstFixedSurface:  -1,
-					ScaledValueOfFirstFixedSurface:  -1,
-					TypeOfSecondFixedSurface:        -1,
-					ScaleFactorOfSecondFixedSurface: -1,
-					ScaledValueOfSecondFixedSurface: -1,
+					ParameterCategory:       0,
+					ParameterNumber:         0,
+					TypeOfGeneratingProcess: 2,
+					BackgroundProcess:       -1,
+					AnalysisOrForecastGeneratingProcessIdentified: -1,
+					HoursAfterDataCutoff:                          -1,
+					MinutesAfterDataCutoff:                        -1,
+					IndicatorOfUnitForForecastTime:                1,
+					ForecastTime:                                  0,
+					TypeOfFirstFixedSurface:                       1,
+					ScaleFactorOfFirstFixedSurface:                -1,
+					ScaledValueOfFirstFixedSurface:                -1,
+					TypeOfSecondFixedSurface:                      -1,
+					ScaleFactorOfSecondFixedSurface:               -1,
+					ScaledValueOfSecondFixedSurface:               -1,
 				})
 			},
 		},
@@ -256,21 +258,21 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 4, 34)
 				assertSection4(t, sec, &pdt.Template0{
-					ParameterCategory:               2,
-					ParameterNumber:                 2,
-					TypeOfGeneratingProcess:         2,
-					BackgroundProcess:               0,
-					GeneratingProcessIdentifier:     96,
-					HoursAfterDataCutoff:            0,
-					MinutesAfterDataCutoff:          0,
-					IndicatorOfUnitForForecastTime:  1,
-					ForecastTime:                    6,
-					TypeOfFirstFixedSurface:         103,
-					ScaleFactorOfFirstFixedSurface:  0,
-					ScaledValueOfFirstFixedSurface:  10,
-					TypeOfSecondFixedSurface:        -1,
-					ScaleFactorOfSecondFixedSurface: 0,
-					ScaledValueOfSecondFixedSurface: 0,
+					ParameterCategory:       2,
+					ParameterNumber:         2,
+					TypeOfGeneratingProcess: 2,
+					BackgroundProcess:       0,
+					AnalysisOrForecastGeneratingProcessIdentified: 96,
+					HoursAfterDataCutoff:                          0,
+					MinutesAfterDataCutoff:                        0,
+					IndicatorOfUnitForForecastTime:                1,
+					ForecastTime:                                  6,
+					TypeOfFirstFixedSurface:                       103,
+					ScaleFactorOfFirstFixedSurface:                0,
+					ScaledValueOfFirstFixedSurface:                10,
+					TypeOfSecondFixedSurface:                      -1,
+					ScaleFactorOfSecondFixedSurface:               0,
+					ScaledValueOfSecondFixedSurface:               0,
 				})
 			},
 		},
@@ -392,21 +394,21 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 4, 34)
 				assertSection4(t, sec, &pdt.Template0{
-					ParameterCategory:               3,
-					ParameterNumber:                 196,
-					TypeOfGeneratingProcess:         2,
-					BackgroundProcess:               0,
-					GeneratingProcessIdentifier:     96,
-					HoursAfterDataCutoff:            0,
-					MinutesAfterDataCutoff:          0,
-					IndicatorOfUnitForForecastTime:  1,
-					ForecastTime:                    44,
-					TypeOfFirstFixedSurface:         1,
-					ScaleFactorOfFirstFixedSurface:  0,
-					ScaledValueOfFirstFixedSurface:  0,
-					TypeOfSecondFixedSurface:        -1,
-					ScaleFactorOfSecondFixedSurface: 0,
-					ScaledValueOfSecondFixedSurface: 0,
+					ParameterCategory:       3,
+					ParameterNumber:         196,
+					TypeOfGeneratingProcess: 2,
+					BackgroundProcess:       0,
+					AnalysisOrForecastGeneratingProcessIdentified: 96,
+					HoursAfterDataCutoff:                          0,
+					MinutesAfterDataCutoff:                        0,
+					IndicatorOfUnitForForecastTime:                1,
+					ForecastTime:                                  44,
+					TypeOfFirstFixedSurface:                       1,
+					ScaleFactorOfFirstFixedSurface:                0,
+					ScaledValueOfFirstFixedSurface:                0,
+					TypeOfSecondFixedSurface:                      -1,
+					ScaleFactorOfSecondFixedSurface:               0,
+					ScaledValueOfSecondFixedSurface:               0,
 				})
 			},
 		},
@@ -651,6 +653,7 @@ func TestGrib2_ReadMessage(t *testing.T) {
 		assert.Equal(t, 196, msg.GetParameterNumber())
 		assert.Equal(t, "2024-08-20T12:00:00Z", msg.GetTimestamp(time.UTC).Format(time.RFC3339))
 		assert.Equal(t, "2024-08-22T08:00:00Z", msg.GetForecastTime(time.UTC).Format(time.RFC3339))
+		assert.Equal(t, 0, msg.GetLevel())
 	}
 
 	{
@@ -658,4 +661,47 @@ func TestGrib2_ReadMessage(t *testing.T) {
 		require.ErrorIs(t, err, io.EOF)
 		assert.Nil(t, msg)
 	}
+}
+
+func TestGrib2_ReadMessages(t *testing.T) {
+	// aws s3 cp --no-sign-request s3://noaa-gfs-bdp-pds/gfs.20240820/12/atmos/gfs.t12z.pgrb2.0p25.f044 pkg/testdata/gfs.t12z.pgrb2.0p25.f044
+	const filename = "../testdata/gfs.t12z.pgrb2.0p25.f044"
+
+	s, err := os.Stat(filename)
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skipf("%s not exist", filename)
+	}
+
+	t.Run(s.Name(), func(t *testing.T) {
+		f, err := os.Open(filename)
+		require.NoError(t, err)
+
+		g := grib.NewGrib2(f)
+		var msgs []grib2.Message
+
+		for i := 0; ; i++ {
+			msg, err := g.ReadMessage()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			require.NotNil(t, msg)
+
+			msgs = append(msgs, msg)
+		}
+
+		var eg errgroup.Group
+		for i, msg := range msgs {
+			eg.Go(func() error {
+				data, err := msg.ReadData()
+				require.NoError(t, err)
+
+				t.Logf("count: %d, discipline: %d, category: %d, number: %d, forecast: %s, dataLen: %d", i+1, msg.GetDiscipline(), msg.GetParameterCategory(), msg.GetParameterNumber(), msg.GetForecastTime(time.UTC), len(data))
+
+				return nil
+			})
+		}
+
+		require.NoError(t, eg.Wait())
+	})
 }

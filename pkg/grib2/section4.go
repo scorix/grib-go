@@ -57,3 +57,7 @@ func (s *section4) GetParameterNumber() int {
 func (s *section4) GetForecastDuration() time.Duration {
 	return s.GetProductDefinitionTemplate().GetForecastDuration()
 }
+
+func (s *section4) GetLevel() int {
+	return s.GetProductDefinitionTemplate().GetLevel()
+}
