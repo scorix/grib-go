@@ -22,6 +22,8 @@ func TestToInt16(t *testing.T) {
 }
 
 func TestToInt8(t *testing.T) {
+	assert.Equal(t, int8(103), regulation.ToInt8(103))
+
 	assert.Equal(t, int8(-1), regulation.ToInt8(math.MaxUint8))
 	assert.Equal(t, int8(math.MaxInt8), regulation.ToInt8(math.MaxInt8))
 }
