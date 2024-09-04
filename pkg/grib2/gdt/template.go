@@ -6,9 +6,13 @@ import (
 	"io"
 )
 
-type Template interface{}
+type Template interface {
+	GetGridPoint(n int) (float32, float32)
+}
 
 type MissingTemplate struct{}
+
+func (m MissingTemplate) GetGridPoint(n int) (float32, float32) { return 0, 0 }
 
 func ReadTemplate(r io.Reader, n uint16) (Template, error) {
 	switch n {

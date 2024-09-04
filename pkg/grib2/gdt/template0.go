@@ -91,3 +91,25 @@ type Template0FixedPart struct {
 	JDirectionIncrement                    int32
 	ScanningMode                           int8
 }
+
+func (t *Template0FixedPart) GetGridPoint(n int) (float32, float32) {
+	return regulation.DegreedLatitudeLongitude(t.GetLatitudeGridPoint(n)), regulation.DegreedLatitudeLongitude(t.GetLongitudeGridPoint(n))
+}
+
+func (t *Template0FixedPart) GetLatitudeGridPoint(n int) int {
+	latFirst, latLast, inc := t.LatitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.IDirectionIncrement
+	if (latFirst-latLast)/t.IDirectionIncrement < 0 {
+		inc = -inc
+	}
+
+	return int(latFirst) - (n/int(t.Ni))*int(inc)
+}
+
+func (t *Template0FixedPart) GetLongitudeGridPoint(n int) int {
+	lonFirst, lonLast, inc := t.LongitudeOfFirstGridPoint, t.LongitudeOfLastGridPoint, t.JDirectionIncrement
+	if (lonFirst-lonLast)/t.IDirectionIncrement < 0 {
+		inc = -inc
+	}
+
+	return int(lonFirst) - (n%int(t.Ni))*int(inc)
+}

@@ -2,8 +2,8 @@ package grib2
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
-	"time"
 
 	"github.com/scorix/grib-go/pkg/grib2/definition"
 	"github.com/scorix/grib-go/pkg/grib2/pdt"
@@ -12,7 +12,6 @@ import (
 type Section4 interface {
 	Section
 	GetProductDefinitionTemplate() pdt.Template
-	pdt.Template
 }
 
 type section4 struct {
@@ -34,7 +33,7 @@ func (s *section4) readFrom(r io.Reader) error {
 
 	tpl, err := pdt.ReadTemplate(r, s.Section4.ProductDefinitionTemplateNumber)
 	if err != nil {
-		return err
+		return fmt.Errorf("read template: %w", err)
 	}
 
 	s.Section4.ProductDefinitionTemplate = tpl
@@ -44,20 +43,4 @@ func (s *section4) readFrom(r io.Reader) error {
 
 func (s *section4) GetProductDefinitionTemplate() pdt.Template {
 	return s.Section4.ProductDefinitionTemplate
-}
-
-func (s *section4) GetParameterCategory() int {
-	return s.GetProductDefinitionTemplate().GetParameterCategory()
-}
-
-func (s *section4) GetParameterNumber() int {
-	return s.GetProductDefinitionTemplate().GetParameterNumber()
-}
-
-func (s *section4) GetForecastDuration() time.Duration {
-	return s.GetProductDefinitionTemplate().GetForecastDuration()
-}
-
-func (s *section4) GetLevel() int {
-	return s.GetProductDefinitionTemplate().GetLevel()
 }

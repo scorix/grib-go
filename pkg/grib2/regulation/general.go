@@ -1,5 +1,7 @@
 package regulation
 
+import "math"
+
 /*
 92.1 General
 
@@ -79,6 +81,11 @@ func IsMissingValue(value uint, bits int) bool {
 }
 
 // 92.1.6
-func DegreedLatitudeLongitude(v float64) float64 {
-	return v / float64(10e6)
+func DegreedLatitudeLongitude(v int) float32 {
+	return float32(float32(v) / 1e6)
+}
+
+// 92.1.12
+func CalculateLevel(value int, factor int) int {
+	return value * int(math.Pow10(factor))
 }

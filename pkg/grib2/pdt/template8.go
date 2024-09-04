@@ -1,10 +1,5 @@
 package pdt
 
-import (
-	"math"
-	"time"
-)
-
 type template8 struct {
 	*template0 // 10-34
 	template8fields
@@ -35,7 +30,7 @@ func (fields template8fields) GetAdditionalTimeRangeSpecifications() []byte {
 	}
 
 	// 59 - nn These octets are included only if n>1, where nn = 46 + 12 x n
-	var nn = 46 + 12*fields.NumberOfTimeRanges
+	var nn = 46 + 12*fields.NumberOfTimeRanges + 12
 
 	return make([]byte, nn)
 }
@@ -48,13 +43,4 @@ func (t template8) Export() *Template8 {
 
 type Template8 struct {
 	*Template0
-}
-
-func (t Template8) GetParameterCategory() int { return int(t.ParameterCategory) }
-func (t Template8) GetParameterNumber() int   { return int(t.ParameterNumber) }
-func (t Template8) GetForecastDuration() time.Duration {
-	return t.IndicatorOfUnitForForecastTime.AsDuration(int(t.ForecastTime))
-}
-func (t Template8) GetLevel() int {
-	return int(t.ScaledValueOfFirstFixedSurface) * int(math.Pow10(int(t.ScaleFactorOfFirstFixedSurface)))
 }

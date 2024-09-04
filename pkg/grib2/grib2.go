@@ -86,6 +86,9 @@ func (g *Grib2) ReadMessage() (Message, error) {
 			m.sec8 = sec.(*section8)
 
 			return m, nil
+
+		default:
+			return nil, fmt.Errorf("unknown section number: %d", sec.Number())
 		}
 	}
 }

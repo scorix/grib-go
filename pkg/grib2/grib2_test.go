@@ -144,7 +144,7 @@ func TestGrib_ReadSection_SimplePacking(t *testing.T) {
 					TypeOfFirstFixedSurface:                       1,
 					ScaleFactorOfFirstFixedSurface:                -1,
 					ScaledValueOfFirstFixedSurface:                -1,
-					TypeOfSecondFixedSurface:                      -1,
+					TypeOfSecondFixedSurface:                      255,
 					ScaleFactorOfSecondFixedSurface:               -1,
 					ScaledValueOfSecondFixedSurface:               -1,
 				})
@@ -270,7 +270,7 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 					TypeOfFirstFixedSurface:                       103,
 					ScaleFactorOfFirstFixedSurface:                0,
 					ScaledValueOfFirstFixedSurface:                10,
-					TypeOfSecondFixedSurface:                      -1,
+					TypeOfSecondFixedSurface:                      255,
 					ScaleFactorOfSecondFixedSurface:               0,
 					ScaledValueOfSecondFixedSurface:               0,
 				})
@@ -406,7 +406,7 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 					TypeOfFirstFixedSurface:                       1,
 					ScaleFactorOfFirstFixedSurface:                0,
 					ScaledValueOfFirstFixedSurface:                0,
-					TypeOfSecondFixedSurface:                      -1,
+					TypeOfSecondFixedSurface:                      255,
 					ScaleFactorOfSecondFixedSurface:               0,
 					ScaledValueOfSecondFixedSurface:               0,
 				})
@@ -448,6 +448,288 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 			name: "section 7",
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 7, 1476779)
+			},
+		},
+		{
+			name: "section 8",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 8, 4)
+			},
+		},
+		{
+			name: "eof",
+			test: func(t *testing.T, sec grib2.Section) {
+				assert.Nil(t, sec)
+			},
+			err: io.EOF,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t2 *testing.T) {
+			sec, err := g.ReadSection()
+			if tt.err == nil {
+				require.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tt.err)
+			}
+
+			tt.test(t2, sec)
+		})
+	}
+}
+
+func TestGrib_ReadSection_tmax(t *testing.T) {
+	f, err := os.Open("../testdata/tmax.grib2")
+	require.NoError(t, err)
+
+	g := grib.NewGrib2(f)
+
+	tests := []struct {
+		name string
+		test func(t *testing.T, sec grib2.Section)
+		err  error
+	}{
+		{
+			name: "section 0",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 0, 16)
+				assertSection0(t, sec, 2, 0, 499330)
+			},
+		},
+		{
+			name: "section 1",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 1, 21)
+				assertSection1(t, sec, "2024-08-20T12:00:00Z")
+			},
+		},
+		{
+			name: "section 3",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 3, 72)
+
+				tpl := gdt.Template0FixedPart{
+					ShapeOfTheEarth:             6,
+					Ni:                          1440,
+					Nj:                          721,
+					SubdivisionsOfBasicAngle:    -1,
+					LatitudeOfFirstGridPoint:    90000000,
+					LongitudeOfFirstGridPoint:   0,
+					ResolutionAndComponentFlags: 48,
+					LatitudeOfLastGridPoint:     -90000000,
+					LongitudeOfLastGridPoint:    359750000,
+					IDirectionIncrement:         250000,
+					JDirectionIncrement:         250000,
+				}
+				assertSection3(t, sec, &gdt.Template0{
+					Template0FixedPart: tpl,
+				})
+
+				assert.Equal(t, true, regulation.IsMissingValue(uint(tpl.SubdivisionsOfBasicAngle), 32))
+			},
+		},
+		{
+			name: "section 4",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 4, 58)
+				assertSection4(t, sec, &pdt.Template8{
+					Template0: &pdt.Template0{
+						ParameterCategory:       0,
+						ParameterNumber:         4,
+						TypeOfGeneratingProcess: 2,
+						BackgroundProcess:       0,
+						AnalysisOrForecastGeneratingProcessIdentified: 96,
+						HoursAfterDataCutoff:                          0,
+						MinutesAfterDataCutoff:                        0,
+						IndicatorOfUnitForForecastTime:                1,
+						ForecastTime:                                  42,
+						TypeOfFirstFixedSurface:                       103,
+						ScaleFactorOfFirstFixedSurface:                0,
+						ScaledValueOfFirstFixedSurface:                2,
+						TypeOfSecondFixedSurface:                      255,
+						ScaleFactorOfSecondFixedSurface:               0,
+						ScaledValueOfSecondFixedSurface:               0,
+					},
+				})
+			},
+		},
+		{
+			name: "section 5",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 5, 49)
+				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
+					ComplexPacking: &gridpoint.ComplexPacking{
+						SimplePacking:              &gridpoint.SimplePacking{R: 2125.6357, E: 0, D: 1, Bits: 9},
+						GroupSplittingMethodUsed:   1,
+						MissingValueManagementUsed: 0,
+						PrimaryMissingSubstitute:   1649987994,
+						SecondaryMissingSubstitute: -1,
+						NumberOfGroups:             32100,
+						Group: &gridpoint.Group{
+							Widths:            0,
+							WidthsBits:        4,
+							LengthsReference:  1,
+							LengthIncrement:   1,
+							LastLength:        41,
+							ScaledLengthsBits: 7,
+						},
+					},
+					SpatialOrderDifference: 2,
+					OctetsNumber:           2,
+				})
+			},
+		},
+		{
+			name: "section 6",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 6, 6)
+			},
+		},
+		{
+			name: "section 7",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 7, 499104)
+			},
+		},
+		{
+			name: "section 8",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 8, 4)
+			},
+		},
+		{
+			name: "eof",
+			test: func(t *testing.T, sec grib2.Section) {
+				assert.Nil(t, sec)
+			},
+			err: io.EOF,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t2 *testing.T) {
+			sec, err := g.ReadSection()
+			if tt.err == nil {
+				require.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tt.err)
+			}
+
+			tt.test(t2, sec)
+		})
+	}
+}
+
+func TestGrib_ReadSection_cwat(t *testing.T) {
+	f, err := os.Open("../testdata/cwat.grib2")
+	require.NoError(t, err)
+
+	g := grib.NewGrib2(f)
+
+	tests := []struct {
+		name string
+		test func(t *testing.T, sec grib2.Section)
+		err  error
+	}{
+		{
+			name: "section 0",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 0, 16)
+				assertSection0(t, sec, 2, 0, 402221)
+			},
+		},
+		{
+			name: "section 1",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 1, 21)
+				assertSection1(t, sec, "2024-08-20T12:00:00Z")
+			},
+		},
+		{
+			name: "section 3",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 3, 72)
+
+				tpl := gdt.Template0FixedPart{
+					ShapeOfTheEarth:             6,
+					Ni:                          1440,
+					Nj:                          721,
+					SubdivisionsOfBasicAngle:    -1,
+					LatitudeOfFirstGridPoint:    90000000,
+					LongitudeOfFirstGridPoint:   0,
+					ResolutionAndComponentFlags: 48,
+					LatitudeOfLastGridPoint:     -90000000,
+					LongitudeOfLastGridPoint:    359750000,
+					IDirectionIncrement:         250000,
+					JDirectionIncrement:         250000,
+				}
+				assertSection3(t, sec, &gdt.Template0{
+					Template0FixedPart: tpl,
+				})
+
+				assert.Equal(t, true, regulation.IsMissingValue(uint(tpl.SubdivisionsOfBasicAngle), 32))
+			},
+		},
+		{
+			name: "section 4",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 4, 34)
+				assertSection4(t, sec, &pdt.Template0{
+					ParameterCategory:       6,
+					ParameterNumber:         6,
+					TypeOfGeneratingProcess: 2,
+					BackgroundProcess:       0,
+					AnalysisOrForecastGeneratingProcessIdentified: 81,
+					HoursAfterDataCutoff:                          0,
+					MinutesAfterDataCutoff:                        0,
+					IndicatorOfUnitForForecastTime:                1,
+					ForecastTime:                                  0,
+					TypeOfFirstFixedSurface:                       200,
+					ScaleFactorOfFirstFixedSurface:                0,
+					ScaledValueOfFirstFixedSurface:                0,
+					TypeOfSecondFixedSurface:                      255,
+					ScaleFactorOfSecondFixedSurface:               0,
+					ScaledValueOfSecondFixedSurface:               0,
+				})
+			},
+		},
+		{
+			name: "section 5",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 5, 49)
+				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
+					ComplexPacking: &gridpoint.ComplexPacking{
+						SimplePacking:              &gridpoint.SimplePacking{R: 0, E: 0, D: 2, Bits: 10},
+						GroupSplittingMethodUsed:   1,
+						MissingValueManagementUsed: 0,
+						PrimaryMissingSubstitute:   1649987994,
+						SecondaryMissingSubstitute: -1,
+						NumberOfGroups:             31329,
+						Group: &gridpoint.Group{
+							Widths:            0,
+							WidthsBits:        4,
+							LengthsReference:  1,
+							LengthIncrement:   1,
+							LastLength:        23,
+							ScaledLengthsBits: 7,
+						},
+					},
+					SpatialOrderDifference: 2,
+					OctetsNumber:           2,
+				})
+			},
+		},
+		{
+			name: "section 6",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 6, 6)
+			},
+		},
+		{
+			name: "section 7",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 7, 402019)
 			},
 		},
 		{
@@ -691,6 +973,7 @@ func TestGrib2_ReadMessages(t *testing.T) {
 		}
 
 		var eg errgroup.Group
+		eg.SetLimit(1)
 		for i, msg := range msgs {
 			eg.Go(func() error {
 				data, err := msg.ReadData()
@@ -703,5 +986,28 @@ func TestGrib2_ReadMessages(t *testing.T) {
 		}
 
 		require.NoError(t, eg.Wait())
+		assert.Equal(t, 743, len(msgs))
+	})
+}
+
+func TestGrib2_ReadMessage_cwat(t *testing.T) {
+	const filename = "../testdata/cwat.grib2"
+
+	s, err := os.Stat(filename)
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skipf("%s not exist", filename)
+	}
+
+	t.Run(s.Name(), func(t *testing.T) {
+		f, err := os.Open(filename)
+		require.NoError(t, err)
+
+		g := grib.NewGrib2(f)
+
+		msg, err := g.ReadMessage()
+		require.NoError(t, err)
+		require.NotNil(t, msg)
+
+		assert.Equal(t, 200, msg.GetTypeOfFirstFixedSurface())
 	})
 }
