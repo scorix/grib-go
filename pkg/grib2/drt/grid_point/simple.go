@@ -11,12 +11,12 @@ import (
 )
 
 type SimplePacking struct {
-	R       float32
-	E       int16
-	D       int16
-	Bits    uint8
-	Type    int8
-	numVals int
+	R       float32 // 12-15
+	E       int16   // 16-17
+	D       int16   // 18-19
+	Bits    uint8   // 20
+	Type    int8    // 21
+	numVals int     // 22
 }
 
 func NewSimplePacking(def definition.SimplePacking, numVals int) *SimplePacking {

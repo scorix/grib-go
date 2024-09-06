@@ -10,14 +10,12 @@ import (
 )
 
 type ComplexPacking struct {
-	*SimplePacking
-
-	GroupSplittingMethodUsed   int8
-	MissingValueManagementUsed int8
-	PrimaryMissingSubstitute   int32
-	SecondaryMissingSubstitute int32
-	NumberOfGroups             int32
-	*Group
+	*SimplePacking                   // 12-21
+	GroupSplittingMethodUsed   int8  // 22
+	MissingValueManagementUsed int8  // 23
+	PrimaryMissingSubstitute   int32 // 24-27
+	SecondaryMissingSubstitute int32 // 28-31
+	*Grouping                        // 32-47
 }
 
 func NewComplexPacking(def definition.ComplexPacking, numVals int) *ComplexPacking {
@@ -27,8 +25,8 @@ func NewComplexPacking(def definition.ComplexPacking, numVals int) *ComplexPacki
 		MissingValueManagementUsed: regulation.ToInt8(def.MissingValueManagementUsed),
 		PrimaryMissingSubstitute:   regulation.ToInt32(def.PrimaryMissingSubstitute),
 		SecondaryMissingSubstitute: regulation.ToInt32(def.SecondaryMissingSubstitute),
-		NumberOfGroups:             regulation.ToInt32(def.NumberOfGroups),
-		Group: &Group{
+		Grouping: &Grouping{
+			NumberOfGroups:    regulation.ToInt32(def.NumberOfGroups),
 			Widths:            def.GroupWidths,
 			WidthsBits:        def.GroupWidthsBits,
 			LengthsReference:  def.GroupLengthsReference,
@@ -54,7 +52,7 @@ func (cp *ComplexPacking) missingValueSubstitute() (float64, float64, error) {
 
 type scaleGroupDataFunc func(data []uint32, missing []uint32, primary float64, secondary float64, scaleFunc func(uint32) float64) ([]float64, error)
 
-func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []group, f scaleGroupDataFunc) ([]float64, error) {
+func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []Group, f scaleGroupDataFunc) ([]float64, error) {
 	data := make([]uint32, cp.numVals)
 	miss := make([]uint32, 0, cp.numVals)
 	idx := 0
@@ -65,7 +63,7 @@ func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []group, f 
 	}
 
 	for _, g := range groups {
-		groupData, err := g.readData(r)
+		groupData, err := g.ReadData(r)
 		if err != nil {
 			return nil, fmt.Errorf("read (%d) data: %w", idx, err)
 		}
@@ -123,7 +121,7 @@ func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []group, f 
 }
 
 func (cp *ComplexPacking) ReadAllData(r datapacking.BitReader) ([]float64, error) {
-	groups, err := cp.readGroups(r)
+	groups, err := cp.ReadGroups(r, cp.Bits)
 	if err != nil {
 		return nil, fmt.Errorf("read groups: %w", err)
 	}
@@ -162,19 +160,26 @@ func (cp *ComplexPacking) scaleValues(data []uint32, miss []uint32, primary floa
 	return values, nil
 }
 
-type Group struct {
-	Widths            uint8
-	WidthsBits        uint8
-	LengthsReference  uint32
-	LengthIncrement   uint8
-	LastLength        uint32
-	ScaledLengthsBits uint8
+type Grouping struct {
+	NumberOfGroups    int32  // 32-35
+	Widths            uint8  // 36
+	WidthsBits        uint8  // 37
+	LengthsReference  uint32 // 38-41
+	LengthIncrement   uint8  // 42
+	LastLength        uint32 // 43-46
+	ScaledLengthsBits uint8  // 47
 }
 
-func (cp *ComplexPacking) readGroups(r datapacking.BitReader) ([]group, error) {
-	references := make([]uint32, cp.NumberOfGroups)
-	for n := range cp.NumberOfGroups {
-		b, err := r.ReadBits(cp.Bits)
+type Group struct {
+	ref    uint32
+	length uint64
+	width  uint8
+}
+
+func (g Grouping) ReadGroups(r datapacking.BitReader, bits uint8) ([]Group, error) {
+	references := make([]uint32, g.NumberOfGroups)
+	for n := range g.NumberOfGroups {
+		b, err := r.ReadBits(bits)
 		if err != nil {
 			return nil, err
 		}
@@ -184,39 +189,39 @@ func (cp *ComplexPacking) readGroups(r datapacking.BitReader) ([]group, error) {
 
 	r.Align()
 
-	widths := make([]uint8, cp.NumberOfGroups)
-	for n := range cp.NumberOfGroups {
-		b, err := r.ReadBits(cp.Group.WidthsBits)
+	widths := make([]uint8, g.NumberOfGroups)
+	for n := range g.NumberOfGroups {
+		b, err := r.ReadBits(g.WidthsBits)
 		if err != nil {
 			return nil, err
 		}
 
-		if int8(b) < 0 {
+		if int(b)+int(g.Widths) < 0 {
 			return nil, fmt.Errorf("invalid width: %d", b)
 		}
 
-		widths[n] = uint8(b) + cp.Group.Widths
+		widths[n] = uint8(b) + g.Widths
 	}
 
 	r.Align()
 
-	lengths := make([]uint64, cp.NumberOfGroups)
-	for n := range cp.NumberOfGroups {
-		b, err := r.ReadBits(cp.Group.ScaledLengthsBits)
+	lengths := make([]uint64, g.NumberOfGroups)
+	for n := range g.NumberOfGroups {
+		b, err := r.ReadBits(g.ScaledLengthsBits)
 		if err != nil {
 			return nil, err
 		}
 
-		lengths[n] = b*uint64(cp.Group.LengthIncrement) + uint64(cp.Group.LengthsReference)
+		lengths[n] = b*uint64(g.LengthIncrement) + uint64(g.LengthsReference)
 	}
 
 	r.Align()
 
-	lengths[cp.NumberOfGroups-1] = uint64(cp.Group.LastLength)
+	lengths[g.NumberOfGroups-1] = uint64(g.LastLength)
 
-	groups := make([]group, cp.NumberOfGroups)
-	for n := range cp.NumberOfGroups {
-		g := group{
+	groups := make([]Group, g.NumberOfGroups)
+	for n := range g.NumberOfGroups {
+		g := Group{
 			ref:    references[n],
 			width:  widths[n],
 			length: lengths[n],
@@ -228,13 +233,7 @@ func (cp *ComplexPacking) readGroups(r datapacking.BitReader) ([]group, error) {
 	return groups, nil
 }
 
-type group struct {
-	ref    uint32
-	length uint64
-	width  uint8
-}
-
-func (g *group) readData(r datapacking.BitReader) ([]uint32, error) {
+func (g *Group) ReadData(r datapacking.BitReader) ([]uint32, error) {
 	data := make([]uint32, g.length)
 
 	if g.width == 0 {

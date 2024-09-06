@@ -9,10 +9,9 @@ import (
 )
 
 type ComplexPackingAndSpatialDifferencing struct {
-	*ComplexPacking
-
-	SpatialOrderDifference int8
-	OctetsNumber           uint8
+	*ComplexPacking              // 12-47
+	SpatialOrderDifference int8  // 48
+	OctetsNumber           uint8 // 49
 }
 
 func NewComplexPackingAndSpatialDifferencing(def definition.ComplexPackingAndSpatialDifferencing, numVals int) *ComplexPackingAndSpatialDifferencing {
@@ -29,7 +28,7 @@ func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r datapacking.BitR
 		return nil, fmt.Errorf("read spacing differential value: %w", err)
 	}
 
-	groups, err := cpsd.readGroups(r)
+	groups, err := cpsd.ReadGroups(r, cpsd.Bits)
 	if err != nil {
 		return nil, fmt.Errorf("read groups: %w", err)
 	}

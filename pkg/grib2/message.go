@@ -8,15 +8,27 @@ import (
 )
 
 type Message interface {
+	Parameter
+	HasLevel
+
+	ReadData() ([]float64, error)
+	Step() int
+
+	GetGridPoint(n int) (float32, float32)
+	GetNi() int
+	GetNj() int
+}
+
+type Parameter interface {
 	GetDiscipline() int
 	GetParameterCategory() int
 	GetParameterNumber() int
 	GetTimestamp(loc *time.Location) time.Time
 	GetForecastTime(loc *time.Location) time.Time
-	GetLevel() int
-	ReadData() ([]float64, error)
-	Step() int
+}
 
+type HasLevel interface {
+	GetLevel() int
 	GetTypeOfFirstFixedSurface() int
 	GetScaleFactorOfFirstFixedSurface() int
 	GetScaledValueOfFirstFixedSurface() int
@@ -24,7 +36,6 @@ type Message interface {
 	GetScaleFactorOfSecondFixedSurface() int
 	GetScaledValueOfSecondFixedSurface() int
 	GetProductDefinitionTemplateNumber() int
-	GetGridPoint(n int) (float32, float32)
 }
 
 type message struct {
@@ -103,4 +114,12 @@ func (m *message) GetProductDefinitionTemplateNumber() int {
 
 func (m *message) GetGridPoint(n int) (float32, float32) {
 	return m.sec3.GetGridDefinitionTemplate().GetGridPoint(n)
+}
+
+func (m *message) GetNi() int {
+	return int(m.sec3.GridDefinitionTemplate.GetNi())
+}
+
+func (m *message) GetNj() int {
+	return int(m.sec3.GridDefinitionTemplate.GetNj())
 }
