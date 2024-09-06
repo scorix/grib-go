@@ -286,8 +286,8 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 					MissingValueManagementUsed: 0,
 					PrimaryMissingSubstitute:   1649987994,
 					SecondaryMissingSubstitute: -1,
-					NumberOfGroups:             2732,
-					Group: &gridpoint.Group{
+					Grouping: &gridpoint.Grouping{
+						NumberOfGroups:    2732,
 						Widths:            0,
 						WidthsBits:        4,
 						LengthsReference:  1,
@@ -423,8 +423,8 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,
 						SecondaryMissingSubstitute: -1,
-						NumberOfGroups:             30736,
-						Group: &gridpoint.Group{
+						Grouping: &gridpoint.Grouping{
+							NumberOfGroups:    30736,
 							Widths:            0,
 							WidthsBits:        5,
 							LengthsReference:  1,
@@ -565,8 +565,8 @@ func TestGrib_ReadSection_tmax(t *testing.T) {
 						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,
 						SecondaryMissingSubstitute: -1,
-						NumberOfGroups:             32100,
-						Group: &gridpoint.Group{
+						Grouping: &gridpoint.Grouping{
+							NumberOfGroups:    32100,
 							Widths:            0,
 							WidthsBits:        4,
 							LengthsReference:  1,
@@ -705,8 +705,8 @@ func TestGrib_ReadSection_cwat(t *testing.T) {
 						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,
 						SecondaryMissingSubstitute: -1,
-						NumberOfGroups:             31329,
-						Group: &gridpoint.Group{
+						Grouping: &gridpoint.Grouping{
+							NumberOfGroups:    31329,
 							Widths:            0,
 							WidthsBits:        4,
 							LengthsReference:  1,

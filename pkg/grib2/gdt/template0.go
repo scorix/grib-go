@@ -113,3 +113,11 @@ func (t *Template0FixedPart) GetLongitudeGridPoint(n int) int {
 
 	return int(lonFirst) - (n%int(t.Ni))*int(inc)
 }
+
+func (t *Template0FixedPart) GetNi() int32 {
+	return t.Ni
+}
+
+func (t *Template0FixedPart) GetNj() int32 {
+	return t.Nj
+}
