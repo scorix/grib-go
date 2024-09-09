@@ -42,3 +42,8 @@ func TestIsMissingValue(t *testing.T) {
 	assert.Equal(t, true, regulation.IsMissingValue(uint(i), 24))
 	assert.Equal(t, true, regulation.IsMissingValue(uint(i), 32))
 }
+
+func TestDegreedLatitudeLongitude(t *testing.T) {
+	l := 269.250000
+	assert.EqualValues(t, l, regulation.DegreedLatitudeLongitude(int(l*1e6)))
+}

@@ -76,6 +76,7 @@ func assertSection5(t testing.TB, sec grib.Section, template drt.Template) {
 func TestGrib_ReadSection_SimplePacking(t *testing.T) {
 	f, err := os.Open("../testdata/temp.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -206,6 +207,7 @@ func TestGrib_ReadSection_SimplePacking(t *testing.T) {
 func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 	f, err := os.Open("../testdata/grid_complex.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -342,6 +344,7 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 	f, err := os.Open("../testdata/hpbl.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -482,6 +485,7 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 func TestGrib_ReadSection_tmax(t *testing.T) {
 	f, err := os.Open("../testdata/tmax.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -624,6 +628,7 @@ func TestGrib_ReadSection_tmax(t *testing.T) {
 func TestGrib_ReadSection_cwat(t *testing.T) {
 	f, err := os.Open("../testdata/cwat.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -764,6 +769,7 @@ func TestGrib_ReadSection_cwat(t *testing.T) {
 func TestSection7_ReadData_SimplePacking(t *testing.T) {
 	f, err := os.Open("../testdata/temp.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -817,6 +823,7 @@ func TestSection7_ReadData_SimplePacking(t *testing.T) {
 func TestSection7_ReadData_ComplexPacking(t *testing.T) {
 	f, err := os.Open("../testdata/grid_complex.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -870,6 +877,7 @@ func TestSection7_ReadData_ComplexPacking(t *testing.T) {
 func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 	f, err := os.Open("../testdata/hpbl.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -923,6 +931,7 @@ func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 func TestGrib2_ReadMessage(t *testing.T) {
 	f, err := os.Open("../testdata/hpbl.grib2")
 	require.NoError(t, err)
+	defer f.Close()
 
 	g := grib.NewGrib2(f)
 
@@ -957,6 +966,7 @@ func TestGrib2_ReadMessages(t *testing.T) {
 	t.Run(s.Name(), func(t *testing.T) {
 		f, err := os.Open(filename)
 		require.NoError(t, err)
+		defer f.Close()
 
 		g := grib.NewGrib2(f)
 		var msgs []grib2.Message
@@ -1001,6 +1011,7 @@ func TestGrib2_ReadMessage_cwat(t *testing.T) {
 	t.Run(s.Name(), func(t *testing.T) {
 		f, err := os.Open(filename)
 		require.NoError(t, err)
+		defer f.Close()
 
 		g := grib.NewGrib2(f)
 

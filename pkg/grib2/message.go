@@ -2,21 +2,40 @@ package grib2
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/icza/bitio"
+	"github.com/scorix/grib-go/pkg/grib2/drt"
+	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
+	"github.com/scorix/grib-go/pkg/grib2/gdt"
 )
 
 type Message interface {
 	Parameter
 	HasLevel
 
+	GetProductDefinitionTemplateNumber() int
+	GetDataRepresentationTemplateNumber() int
+	GetDataRepresentationTemplate() drt.Template
+	GetScanningMode() (gdt.ScanningMode, error)
+
 	ReadData() ([]float64, error)
 	Step() int
 
-	GetGridPoint(n int) (float32, float32)
+	GetGridPointLL(n int) (float32, float32, error)
+	GetGridPointFromLL(float32, float32) (int, error)
 	GetNi() int
 	GetNj() int
+	GetSize() int64
+}
+
+type IndexedMessage interface {
+	Message
+
+	GetOffset() int64
+	GetDataOffset() int64
 }
 
 type Parameter interface {
@@ -35,10 +54,12 @@ type HasLevel interface {
 	GetTypeOfSecondFixedSurface() int
 	GetScaleFactorOfSecondFixedSurface() int
 	GetScaledValueOfSecondFixedSurface() int
-	GetProductDefinitionTemplateNumber() int
 }
 
 type message struct {
+	offset     int64
+	dataOffset int64
+
 	sec0 *section0
 	sec1 *section1
 	sec2 *section2
@@ -112,8 +133,34 @@ func (m *message) GetProductDefinitionTemplateNumber() int {
 	return int(m.sec4.ProductDefinitionTemplateNumber)
 }
 
-func (m *message) GetGridPoint(n int) (float32, float32) {
-	return m.sec3.GetGridDefinitionTemplate().GetGridPoint(n)
+func (m *message) GetDataRepresentationTemplateNumber() int {
+	return int(m.sec5.DataRepresentationTemplateNumber)
+}
+
+func (m *message) GetDataRepresentationTemplate() drt.Template {
+	return m.sec5.DataRepresentationTemplate
+}
+
+func (m *message) GetGridPointLL(n int) (float32, float32, error) {
+	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	lat, lng := sm.GetGridPointLL(n)
+
+	return lat, lng, nil
+}
+
+func (m *message) GetGridPointFromLL(lat float32, lon float32) (int, error) {
+	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
+	if err != nil {
+		return 0, err
+	}
+
+	n := sm.GetGridPointFromLL(lat, lon)
+
+	return n, nil
 }
 
 func (m *message) GetNi() int {
@@ -122,4 +169,59 @@ func (m *message) GetNi() int {
 
 func (m *message) GetNj() int {
 	return int(m.sec3.GridDefinitionTemplate.GetNj())
+}
+
+func (m *message) GetOffset() int64 {
+	return m.offset
+}
+
+func (m *message) GetDataOffset() int64 {
+	return m.dataOffset
+}
+
+func (m *message) GetSize() int64 {
+	return int64(m.sec0.GribLength)
+}
+
+func (m *message) GetScanningMode() (gdt.ScanningMode, error) {
+	return m.sec3.GridDefinitionTemplate.GetScanningMode()
+}
+
+type MessageReader interface {
+	ReadLL(float32, float32) (float64, error)
+}
+
+type simplePackingMessageReader struct {
+	sp  *gridpoint.SimplePacking
+	spr *gridpoint.SimplePackingReader
+	sm  gdt.ScanningMode
+}
+
+func NewSimplePackingMessageReader(r io.ReaderAt, m IndexedMessage) (MessageReader, error) {
+	sp, ok := m.GetDataRepresentationTemplate().(*gridpoint.SimplePacking)
+	if !ok {
+		return nil, fmt.Errorf("%T is not supported", m.GetDataRepresentationTemplate())
+	}
+
+	sm, err := m.GetScanningMode()
+	if err != nil {
+		return nil, fmt.Errorf("get scanning mode: %w", err)
+	}
+
+	return &simplePackingMessageReader{
+		spr: gridpoint.NewSimplePackingReader(r, m.GetDataOffset(), sp),
+		sp:  sp,
+		sm:  sm,
+	}, nil
+}
+
+func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float64, error) {
+	grid := r.sm.GetGridPointFromLL(lat, lon)
+
+	v, err := r.spr.ReadGridAt(grid)
+	if err != nil {
+		return 0, fmt.Errorf("grid %d: %w", grid, err)
+	}
+
+	return v, nil
 }
