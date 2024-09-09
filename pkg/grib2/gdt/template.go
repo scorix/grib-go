@@ -7,16 +7,19 @@ import (
 )
 
 type Template interface {
-	GetGridPoint(n int) (float32, float32)
+	GetScanningMode() (ScanningMode, error)
 	GetNi() int32
 	GetNj() int32
 }
 
 type MissingTemplate struct{}
 
-func (m MissingTemplate) GetGridPoint(n int) (float32, float32) { return 0, 0 }
-func (m MissingTemplate) GetNi() int32                          { return 0 }
-func (m MissingTemplate) GetNj() int32                          { return 0 }
+func (m MissingTemplate) GetScanningMode() (ScanningMode, error) {
+	return nil, fmt.Errorf("unknown scanning mode")
+}
+func (m MissingTemplate) GetGridPointFromLL(float32, float32) int { return 0 }
+func (m MissingTemplate) GetNi() int32                            { return 0 }
+func (m MissingTemplate) GetNj() int32                            { return 0 }
 
 func ReadTemplate(r io.Reader, n uint16) (Template, error) {
 	switch n {

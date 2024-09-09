@@ -4,7 +4,9 @@ go 1.22.2
 
 require (
 	github.com/icza/bitio v1.1.0
+	github.com/scorix/go-eccodes v0.1.5
 	github.com/stretchr/testify v1.9.0
+	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
 	golang.org/x/sync v0.8.0
 )
 

@@ -1,10 +1,13 @@
 package gridpoint
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"math"
 
+	"github.com/icza/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
@@ -64,4 +67,46 @@ func (sp *SimplePacking) ReadAllData(r datapacking.BitReader) ([]float64, error)
 	}
 
 	return values, nil
+}
+
+type SimplePackingReader struct {
+	r      io.ReaderAt
+	sp     *SimplePacking
+	sf     func(uint32) float64
+	offset int64
+}
+
+func NewSimplePackingReader(r io.ReaderAt, baseOffset int64, sp *SimplePacking) *SimplePackingReader {
+	return &SimplePackingReader{
+		r:      r,
+		sp:     sp,
+		sf:     sp.ScaleFunc(),
+		offset: baseOffset,
+	}
+}
+
+func (r *SimplePackingReader) ReadGridAt(n int) (float64, error) {
+	bitsOffset := n * int(r.sp.Bits)
+	skipBits := bitsOffset % 8
+	needBytes := int(math.Ceil(float64(int(r.sp.Bits)+skipBits) / float64(8.0)))
+
+	bs := make([]byte, needBytes)
+	if _, err := r.r.ReadAt(bs, r.offset+int64(bitsOffset/8)); err != nil {
+		return 0, fmt.Errorf("read at: %w", err)
+	}
+
+	br := bitio.NewReader(bytes.NewReader(bs))
+
+	if skipBits > 0 {
+		if _, err := br.ReadBits(uint8(skipBits)); err != nil {
+			return 0, fmt.Errorf("skip %d bits: %w", skipBits, err)
+		}
+	}
+
+	u, err := br.ReadBits(r.sp.Bits)
+	if err != nil {
+		return 0, fmt.Errorf("read %d bits: %w", r.sp.Bits, err)
+	}
+
+	return r.sf(uint32(u)), nil
 }

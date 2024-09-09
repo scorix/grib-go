@@ -82,7 +82,7 @@ func IsMissingValue(value uint, bits int) bool {
 
 // 92.1.6
 func DegreedLatitudeLongitude(v int) float32 {
-	return float32(float32(v) / 1e6)
+	return float32(math.Pow10(-6) * float64(v))
 }
 
 // 92.1.12

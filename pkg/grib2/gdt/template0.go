@@ -1,6 +1,9 @@
 package gdt
 
 import (
+	"fmt"
+	"math"
+
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 )
 
@@ -92,26 +95,30 @@ type Template0FixedPart struct {
 	ScanningMode                           int8
 }
 
-func (t *Template0FixedPart) GetGridPoint(n int) (float32, float32) {
-	return regulation.DegreedLatitudeLongitude(t.GetLatitudeGridPoint(n)), regulation.DegreedLatitudeLongitude(t.GetLongitudeGridPoint(n))
+type ScanningMode interface {
+	GetGridPointLL(n int) (float32, float32)
+	GetGridPointFromLL(lat float32, lng float32) int
 }
 
-func (t *Template0FixedPart) GetLatitudeGridPoint(n int) int {
-	latFirst, latLast, inc := t.LatitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.IDirectionIncrement
-	if (latFirst-latLast)/t.IDirectionIncrement < 0 {
-		inc = -inc
+func (t *Template0FixedPart) GetScanningMode() (ScanningMode, error) {
+	switch t.ScanningMode {
+	case 0:
+		sm := ScanningMode0000{
+			Ni:                          t.Ni,
+			Nj:                          t.Nj,
+			LatitudeOfFirstGridPoint:    t.LatitudeOfFirstGridPoint,
+			LongitudeOfFirstGridPoint:   t.LongitudeOfFirstGridPoint,
+			ResolutionAndComponentFlags: t.ResolutionAndComponentFlags,
+			LatitudeOfLastGridPoint:     t.LatitudeOfLastGridPoint,
+			LongitudeOfLastGridPoint:    t.LongitudeOfLastGridPoint,
+			IDirectionIncrement:         t.IDirectionIncrement,
+			JDirectionIncrement:         t.JDirectionIncrement,
+		}
+
+		return &sm, nil
 	}
 
-	return int(latFirst) - (n/int(t.Ni))*int(inc)
-}
-
-func (t *Template0FixedPart) GetLongitudeGridPoint(n int) int {
-	lonFirst, lonLast, inc := t.LongitudeOfFirstGridPoint, t.LongitudeOfLastGridPoint, t.JDirectionIncrement
-	if (lonFirst-lonLast)/t.IDirectionIncrement < 0 {
-		inc = -inc
-	}
-
-	return int(lonFirst) - (n%int(t.Ni))*int(inc)
+	return nil, fmt.Errorf("scanning mode %04b is not implemented", t.ScanningMode)
 }
 
 func (t *Template0FixedPart) GetNi() int32 {
@@ -120,4 +127,66 @@ func (t *Template0FixedPart) GetNi() int32 {
 
 func (t *Template0FixedPart) GetNj() int32 {
 	return t.Nj
+}
+
+type ScanningMode0000 struct {
+	Ni                          int32
+	Nj                          int32
+	LatitudeOfFirstGridPoint    int32
+	LongitudeOfFirstGridPoint   int32
+	ResolutionAndComponentFlags int8
+	LatitudeOfLastGridPoint     int32
+	LongitudeOfLastGridPoint    int32
+	IDirectionIncrement         int32
+	JDirectionIncrement         int32
+}
+
+func (sm *ScanningMode0000) GetLatitudeGridPoint(n int) int {
+	latFirst, latLast, inc := sm.LatitudeOfFirstGridPoint, sm.LatitudeOfLastGridPoint, sm.IDirectionIncrement
+	if (latFirst-latLast)/sm.IDirectionIncrement < 0 {
+		inc = -inc
+	}
+
+	return int(latFirst) - (n/int(sm.Ni))*int(inc)
+}
+
+func (sm *ScanningMode0000) GetLatitudeGridIndex(lat float32) int {
+	latFirst, latLast, inc := sm.LatitudeOfFirstGridPoint, sm.LatitudeOfLastGridPoint, sm.IDirectionIncrement
+	if (latFirst-latLast)/sm.IDirectionIncrement < 0 {
+		inc = -inc
+	}
+
+	return (int(latFirst) - toInt(lat)) / int(inc)
+}
+
+func (sm *ScanningMode0000) GetLongitudeGridPoint(n int) int {
+	lonFirst, lonLast, inc := sm.LongitudeOfFirstGridPoint, sm.LongitudeOfLastGridPoint, sm.JDirectionIncrement
+	if (lonFirst-lonLast)/sm.IDirectionIncrement < 0 {
+		inc = -inc
+	}
+
+	return int(lonFirst) - (n%int(sm.Ni))*int(inc)
+}
+
+func (sm *ScanningMode0000) GetLongitudeGridIndex(lng float32) int {
+	lonFirst, lonLast, inc := sm.LongitudeOfFirstGridPoint, sm.LongitudeOfLastGridPoint, sm.JDirectionIncrement
+	if (lonFirst-lonLast)/sm.IDirectionIncrement < 0 {
+		inc = -inc
+	}
+
+	return (int(lonFirst) - toInt(lng)) / int(inc)
+}
+
+func (sm *ScanningMode0000) GetGridPointLL(n int) (float32, float32) {
+	return regulation.DegreedLatitudeLongitude(sm.GetLatitudeGridPoint(n)), regulation.DegreedLatitudeLongitude(sm.GetLongitudeGridPoint(n))
+}
+
+func (sm *ScanningMode0000) GetGridPointFromLL(lat float32, lng float32) int {
+	return sm.GetLatitudeGridIndex(lat)*int(sm.Ni) + sm.GetLongitudeGridIndex(lng)
+}
+
+func toInt(v float32) int {
+	i := math.Floor(float64(v) * 1e6)
+
+	return int(i)
 }
