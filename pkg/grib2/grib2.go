@@ -114,7 +114,7 @@ func (g *Grib2) readIndexedMessage(offset int64) (IndexedMessage, error) {
 	}
 }
 
-func (g *Grib2) EachMessage(f func(IndexedMessage) error) error {
+func (g *Grib2) EachMessage(f func(m IndexedMessage) (next bool, err error)) error {
 	for {
 		m, err := g.ReadMessage()
 
@@ -126,8 +126,15 @@ func (g *Grib2) EachMessage(f func(IndexedMessage) error) error {
 			return fmt.Errorf("read message: %w", err)
 		}
 
-		if err := f(m); err != nil {
+		next, err := f(m)
+		if err != nil {
 			return err
 		}
+
+		if next {
+			continue
+		}
+
+		return nil
 	}
 }
