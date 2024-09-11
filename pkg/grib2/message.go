@@ -209,7 +209,7 @@ func NewSimplePackingMessageReader(r io.ReaderAt, m IndexedMessage) (MessageRead
 	}
 
 	return &simplePackingMessageReader{
-		spr: gridpoint.NewSimplePackingReader(r, m.GetDataOffset(), sp),
+		spr: gridpoint.NewSimplePackingReader(r, m.GetDataOffset(), m.GetSize()+m.GetOffset(), sp),
 		sp:  sp,
 		sm:  sm,
 	}, nil
