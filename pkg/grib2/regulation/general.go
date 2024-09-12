@@ -87,5 +87,5 @@ func DegreedLatitudeLongitude(v int) float32 {
 
 // 92.1.12
 func CalculateLevel(value int, factor int) int {
-	return value * int(math.Pow10(factor))
+	return value / int(math.Pow10(factor))
 }
