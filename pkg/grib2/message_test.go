@@ -16,6 +16,8 @@ import (
 )
 
 func TestMessageReader_ReadLL(t *testing.T) {
+	t.Parallel()
+
 	// grib_set -r -s packingType=grid_simple pkg/testdata/hpbl.grib2 pkg/testdata/hpbl.grib2.out
 	const filename = "../testdata/hpbl.grib2.out"
 
