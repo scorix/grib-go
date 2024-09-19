@@ -34,6 +34,12 @@ func NewGrib2(r io.Reader) *Grib2 {
 	}
 }
 
+func NewLazyGrib2(r io.ReadSeeker) *Grib2 {
+	return &Grib2{
+		r: gribio.NewLazyGribSectionReader(r),
+	}
+}
+
 type Grib2 struct {
 	r      gribio.SectionReader
 	offset int64
