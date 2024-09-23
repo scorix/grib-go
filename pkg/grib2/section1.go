@@ -1,7 +1,6 @@
 package grib2
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -27,16 +26,18 @@ func (s *section1) Number() int {
 	return int(s.Section1.NumberOfSection)
 }
 
-func (s *section1) readFrom(r io.Reader) error {
-	if err := binary.Read(r, binary.BigEndian, &s.Section1.Section1FixedPart); err != nil {
+func (s *section1) readFrom(r io.ReaderAt, offset int64, length int64) error {
+	p := make([]byte, length)
+	if _, err := r.ReadAt(p, offset); err != nil {
+		return fmt.Errorf("read %d bytes at %d: %w", length, offset, err)
+	}
+
+	n, err := binary.Decode(p, binary.BigEndian, &s.Section1.Section1FixedPart)
+	if err != nil {
 		return fmt.Errorf("binary read: %w", err)
 	}
 
-	n := int64(s.Section1.Section1FixedPart.Section1Length - 21)
-
-	if _, err := io.CopyN(bytes.NewBuffer(s.Section1.Reserved), r, n); err != nil {
-		return fmt.Errorf("copy reserved: %w", err)
-	}
+	s.Section1.Reserved = p[n:]
 
 	return nil
 }

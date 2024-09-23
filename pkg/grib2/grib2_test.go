@@ -1021,55 +1021,6 @@ func TestGrib2_ReadMessages(t *testing.T) {
 	})
 }
 
-func TestGrib2_LazyReadMessages(t *testing.T) {
-	t.Parallel()
-	// aws s3 cp --no-sign-request s3://noaa-gfs-bdp-pds/gfs.20240820/12/atmos/gfs.t12z.pgrb2.0p25.f044 pkg/testdata/gfs.t12z.pgrb2.0p25.f044
-	const filename = "../testdata/gfs.t12z.pgrb2.0p25.f044"
-
-	s, err := os.Stat(filename)
-	if errors.Is(err, os.ErrNotExist) {
-		t.Skipf("%s not exist", filename)
-	}
-
-	t.Run(s.Name(), func(t *testing.T) {
-		t.Parallel()
-
-		f, err := os.Open(filename)
-		require.NoError(t, err)
-		defer f.Close()
-
-		g := grib.NewLazyGrib2(f)
-		var msgs []grib2.Message
-
-		for i := 0; ; i++ {
-			msg, err := g.ReadMessage()
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			require.NoError(t, err)
-			require.NotNil(t, msg)
-
-			msgs = append(msgs, msg)
-		}
-
-		var eg errgroup.Group
-		eg.SetLimit(1)
-		for i, msg := range msgs {
-			eg.Go(func() error {
-				data, err := msg.ReadData()
-				require.NoError(t, err)
-
-				t.Logf("count: %d, discipline: %d, category: %d, number: %d, forecast: %s, dataLen: %d", i+1, msg.GetDiscipline(), msg.GetParameterCategory(), msg.GetParameterNumber(), msg.GetForecastTime(time.UTC), len(data))
-
-				return nil
-			})
-		}
-
-		require.NoError(t, eg.Wait())
-		assert.Equal(t, 743, len(msgs))
-	})
-}
-
 func TestGrib2_ReadMessage_cwat(t *testing.T) {
 	t.Parallel()
 

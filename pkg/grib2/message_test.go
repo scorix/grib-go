@@ -57,6 +57,7 @@ func TestMessageReader_ReadLL(t *testing.T) {
 		require.NotNil(t, msg)
 
 		assert.Equal(t, 1, msg.GetTypeOfFirstFixedSurface())
+		assert.Equal(t, int64(2206439), msg.GetSize())
 		assert.Equal(t, int64(0), msg.GetOffset())
 		assert.Equal(t, int64(175), msg.GetDataOffset())
 
