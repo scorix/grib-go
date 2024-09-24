@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync/atomic"
 
 	"github.com/scorix/grib-go/pkg/gribio"
 )
@@ -28,21 +29,23 @@ var (
 	}
 )
 
-func NewGrib2(r io.Reader) *Grib2 {
-	return &Grib2{
-		r: gribio.NewGribSectionReader(r),
-	}
+type grib2reader interface {
+	io.Reader
+	io.ReaderAt
 }
 
-func NewLazyGrib2(r io.ReadSeeker) *Grib2 {
+func NewGrib2(r grib2reader) *Grib2 {
 	return &Grib2{
-		r: gribio.NewLazyGribSectionReader(r),
+		ReaderAt: r,
+		r:        gribio.NewGribSectionReader(r),
 	}
 }
 
 type Grib2 struct {
+	io.ReaderAt
 	r      gribio.SectionReader
 	offset int64
+	cursor int64
 }
 
 func (g *Grib2) ReadSection() (Section, error) {
@@ -57,9 +60,12 @@ func (g *Grib2) ReadSection() (Section, error) {
 	}
 
 	s := sectionFunc()
-	if err := s.readFrom(sec.Reader()); err != nil {
-		return nil, err
+
+	if err := s.readFrom(g.ReaderAt, g.cursor, int64(sec.Length())); err != nil {
+		return nil, fmt.Errorf("section %d: %w", sec.Number(), err)
 	}
+
+	atomic.AddInt64(&g.cursor, int64(s.Length()))
 
 	return s, nil
 }
@@ -75,9 +81,19 @@ func (g *Grib2) ReadMessage() (IndexedMessage, error) {
 	return m, nil
 }
 
+func (g *Grib2) ReadMessageAt(offset int64) (IndexedMessage, error) {
+	m, err := g.readIndexedMessage(offset)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
 func (g *Grib2) readIndexedMessage(offset int64) (IndexedMessage, error) {
 	m := &message{offset: offset}
 
+ReadAllSections:
 	for {
 		sec, err := g.ReadSection()
 		if err != nil {
@@ -87,37 +103,31 @@ func (g *Grib2) readIndexedMessage(offset int64) (IndexedMessage, error) {
 		switch sec.Number() {
 		case 0:
 			m.sec0 = sec.(*section0)
-			m.dataOffset = offset + int64(m.sec0.Length())
 		case 1:
 			m.sec1 = sec.(*section1)
-			m.dataOffset += int64(m.sec1.Length())
 		case 2:
 			m.sec2 = sec.(*section2)
-			m.dataOffset += int64(m.sec2.Length())
 		case 3:
 			m.sec3 = sec.(*section3)
-			m.dataOffset += int64(m.sec3.Length())
 		case 4:
 			m.sec4 = sec.(*section4)
-			m.dataOffset += int64(m.sec4.Length())
 		case 5:
 			m.sec5 = sec.(*section5)
-			m.dataOffset += int64(m.sec5.Length())
 		case 6:
 			m.sec6 = sec.(*section6)
-			m.dataOffset += int64(m.sec6.Length())
 		case 7:
 			m.sec7 = sec.(*section7)
-			m.dataOffset += int64(m.sec7.Length() - len(m.sec7.Data))
 		case 8:
 			m.sec8 = sec.(*section8)
 
-			return m, nil
+			break ReadAllSections
 
 		default:
 			return nil, fmt.Errorf("unknown section number: %d", sec.Number())
 		}
 	}
+
+	return m, nil
 }
 
 func (g *Grib2) EachMessage(f func(m IndexedMessage) (next bool, err error)) error {

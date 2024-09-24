@@ -97,6 +97,9 @@ func (m *message) GetLevel() int {
 
 func (m *message) ReadData() ([]float64, error) {
 	tpl := m.sec5.GetDataRepresentationTemplate()
+	if err := m.sec7.LoadData(); err != nil {
+		return nil, err
+	}
 
 	return tpl.ReadAllData(bitio.NewReader(bytes.NewReader(m.sec7.Data)))
 }
@@ -176,7 +179,7 @@ func (m *message) GetOffset() int64 {
 }
 
 func (m *message) GetDataOffset() int64 {
-	return m.dataOffset
+	return m.sec7.dataOffset
 }
 
 func (m *message) GetSize() int64 {

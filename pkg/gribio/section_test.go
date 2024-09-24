@@ -1,9 +1,7 @@
 package gribio_test
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 
@@ -44,53 +42,11 @@ func TestSectionReader_ReadSection(t *testing.T) {
 			assert.Equal(t, section.length, sec.Length())
 
 			if section.body != nil {
-				body := bytes.NewBuffer(nil)
-				n, err := io.Copy(body, sec.Reader())
+				body := make([]byte, sec.Length())
+				n, err := sec.Reader().ReadAt(body, 0)
 				require.NoError(t, err)
 				assert.Equal(t, section.length, int(n))
-				assert.Equal(t, section.body, body.Bytes())
-			}
-		})
-	}
-}
-
-func TestLazySectionReader_ReadSection(t *testing.T) {
-	t.Parallel()
-
-	f, err := os.Open("../testdata/temp.grib2")
-	require.NoError(t, err)
-
-	sr := gribio.NewLazyGribSectionReader(f)
-
-	sections := []struct {
-		number int
-		length int
-		body   []byte
-	}{
-		{number: 0, length: 16, body: []byte{0x47, 0x52, 0x49, 0x42, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x1a, 0xe}},
-		{number: 1, length: 21, body: []byte{0x0, 0x0, 0x0, 0x15, 0x1, 0x0, 0x4a, 0x0, 0x5, 0x1d, 0x1, 0x1, 0x7, 0xe7, 0x7, 0xb, 0x0, 0x0, 0x0, 0x0, 0x1}},
-		{number: 3, length: 72},
-		{number: 4, length: 34},
-		{number: 5, length: 21},
-		{number: 6, length: 6},
-		{number: 7, length: 203_104},
-		{number: 8, length: 4},
-	}
-
-	for _, section := range sections {
-		t.Run(fmt.Sprintf("section %d", section.number), func(t *testing.T) {
-			sec, err := sr.ReadSection()
-			require.NoError(t, err)
-
-			assert.Equal(t, section.number, sec.Number())
-			assert.Equal(t, section.length, sec.Length())
-
-			if section.body != nil {
-				body := bytes.NewBuffer(nil)
-				n, err := io.Copy(body, sec.Reader())
-				require.NoError(t, err)
-				assert.Equal(t, section.length, int(n))
-				assert.Equal(t, section.body, body.Bytes())
+				assert.Equal(t, section.body, body)
 			}
 		})
 	}

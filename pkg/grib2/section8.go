@@ -24,8 +24,14 @@ func (s *section8) Number() int {
 	return 8
 }
 
-func (s *section8) readFrom(r io.Reader) error {
-	if err := binary.Read(r, binary.BigEndian, &s.Section8); err != nil {
+func (s *section8) readFrom(r io.ReaderAt, offset int64, length int64) error {
+	p := make([]byte, length)
+	if _, err := r.ReadAt(p, offset); err != nil {
+		return fmt.Errorf("read %d bytes at %d: %w", length, offset, err)
+	}
+
+	_, err := binary.Decode(p, binary.BigEndian, &s.Section8)
+	if err != nil {
 		return fmt.Errorf("binary read: %w", err)
 	}
 

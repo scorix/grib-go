@@ -7,7 +7,7 @@ import (
 type Section interface {
 	Number() int
 	Length() int
-	readFrom(r io.Reader) error
+	readFrom(r io.ReaderAt, offset int64, length int64) error
 	// Bytes() []byte
 }
 

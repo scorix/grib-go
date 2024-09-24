@@ -1,6 +1,6 @@
 module github.com/scorix/grib-go
 
-go 1.22.2
+go 1.23.1
 
 require (
 	github.com/icza/bitio v1.1.0
