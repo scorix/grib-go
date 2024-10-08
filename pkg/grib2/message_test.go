@@ -10,7 +10,6 @@ import (
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/mmap"
 )
@@ -56,10 +55,10 @@ func TestMessageReader_ReadLL(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, msg)
 
-		assert.Equal(t, 1, msg.GetTypeOfFirstFixedSurface())
-		assert.Equal(t, int64(2206439), msg.GetSize())
-		assert.Equal(t, int64(0), msg.GetOffset())
-		assert.Equal(t, int64(175), msg.GetDataOffset())
+		require.Equal(t, 1, msg.GetTypeOfFirstFixedSurface())
+		require.Equal(t, int64(2206439), msg.GetSize())
+		require.Equal(t, int64(0), msg.GetOffset())
+		require.Equal(t, int64(175), msg.GetDataOffset())
 
 		mm, err := mmap.Open(f.Name())
 		require.NoError(t, err)
@@ -79,14 +78,14 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			{
 				v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
-				assert.InDelta(t, float32(val), float32(v), 1e-5)
+				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 
 			{
 				// read again
 				v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
-				assert.InDelta(t, float32(val), float32(v), 1e-5)
+				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 
 		}
