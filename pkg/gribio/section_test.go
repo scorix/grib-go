@@ -15,8 +15,7 @@ func TestSectionReader_ReadSection(t *testing.T) {
 
 	f, err := os.Open("../testdata/temp.grib2")
 	require.NoError(t, err)
-
-	sr := gribio.NewGribSectionReader(f)
+	defer f.Close()
 
 	sections := []struct {
 		number int
@@ -36,15 +35,15 @@ func TestSectionReader_ReadSection(t *testing.T) {
 
 	for _, section := range sections {
 		t.Run(fmt.Sprintf("section %d", section.number), func(t *testing.T) {
-			sec, err := sr.ReadSectionAt(section.offset)
+			num, length, err := gribio.DiscernSection(f, section.offset)
 			require.NoError(t, err)
 
-			assert.Equal(t, section.number, sec.Number())
-			assert.Equal(t, section.length, sec.Length())
+			assert.Equal(t, section.number, int(num))
+			assert.Equal(t, section.length, int(length))
 
 			if section.body != nil {
-				body := make([]byte, sec.Length())
-				n, err := sec.Reader().ReadAt(body, section.offset)
+				body := make([]byte, section.length)
+				n, err := f.ReadAt(body, section.offset)
 				require.NoError(t, err)
 				assert.Equal(t, section.length, int(n))
 				assert.Equal(t, section.body, body)

@@ -96,10 +96,14 @@ func (m *message) GetLevel() int {
 func (m *message) ReadData() ([]float64, error) {
 	tpl := m.sec5.GetDataRepresentationTemplate()
 	if err := m.sec7.LoadData(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load data from section 7: %w", err)
 	}
 
-	return tpl.ReadAllData(bitio.NewReader(bytes.NewReader(m.sec7.Data)))
+	data, err := tpl.ReadAllData(bitio.NewReader(bytes.NewReader(m.sec7.Data)))
+	if err != nil {
+		return nil, fmt.Errorf("read data using template: %w", err)
+	}
+	return data, nil
 }
 
 func (m *message) Step() int {
@@ -145,7 +149,7 @@ func (m *message) GetDataRepresentationTemplate() drt.Template {
 func (m *message) GetGridPointLL(n int) (float32, float32, error) {
 	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("get scanning mode: %w", err)
 	}
 
 	lat, lng := sm.GetGridPointLL(n)
@@ -156,7 +160,7 @@ func (m *message) GetGridPointLL(n int) (float32, float32, error) {
 func (m *message) GetGridPointFromLL(lat float32, lon float32) (int, error) {
 	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("get scanning mode: %w", err)
 	}
 
 	n := sm.GetGridPointFromLL(lat, lon)
@@ -188,6 +192,32 @@ func (m *message) GetScanningMode() (gdt.ScanningMode, error) {
 	return m.sec3.GridDefinitionTemplate.GetScanningMode()
 }
 
+func (m *message) assignSection(sec Section) error {
+	switch sec.Number() {
+	case 0:
+		m.sec0 = sec.(*section0)
+	case 1:
+		m.sec1 = sec.(*section1)
+	case 2:
+		m.sec2 = sec.(*section2)
+	case 3:
+		m.sec3 = sec.(*section3)
+	case 4:
+		m.sec4 = sec.(*section4)
+	case 5:
+		m.sec5 = sec.(*section5)
+	case 6:
+		m.sec6 = sec.(*section6)
+	case 7:
+		m.sec7 = sec.(*section7)
+	case 8:
+		m.sec8 = sec.(*section8)
+	default:
+		return fmt.Errorf("unknown section number: %d", sec.Number())
+	}
+	return nil
+}
+
 type MessageReader interface {
 	ReadLL(float32, float32) (float64, error)
 }
@@ -201,7 +231,7 @@ type simplePackingMessageReader struct {
 func NewSimplePackingMessageReader(r io.ReaderAt, m IndexedMessage) (MessageReader, error) {
 	sp, ok := m.GetDataRepresentationTemplate().(*gridpoint.SimplePacking)
 	if !ok {
-		return nil, fmt.Errorf("%T is not supported", m.GetDataRepresentationTemplate())
+		return nil, fmt.Errorf("unsupported data representation template: %T", m.GetDataRepresentationTemplate())
 	}
 
 	sm, err := m.GetScanningMode()
@@ -221,7 +251,7 @@ func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float64, 
 
 	v, err := r.spr.ReadGridAt(grid)
 	if err != nil {
-		return 0, fmt.Errorf("grid %d: %w", grid, err)
+		return 0, fmt.Errorf("read grid at point %d (lat: %f, lon: %f): %w", grid, lat, lon, err)
 	}
 
 	return v, nil

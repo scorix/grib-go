@@ -1151,6 +1151,11 @@ func TestGrib2_ReadMessageAt(t *testing.T) {
 		msg1, err := g.ReadMessageAt(0)
 		require.NoError(t, err)
 		require.NotNil(t, msg1)
+
+		{
+			_, err := g.ReadMessageAt(msg1.GetOffset() + msg1.GetSize())
+			require.ErrorIs(t, err, io.EOF)
+		}
 	})
 
 	t.Run("mmap", func(t *testing.T) {
@@ -1211,6 +1216,11 @@ func TestGrib2_ReadMessageAt(t *testing.T) {
 		msg1, err := g.ReadMessageAt(0)
 		require.NoError(t, err)
 		require.NotNil(t, msg1)
+
+		{
+			_, err := g.ReadMessageAt(msg1.GetOffset() + msg1.GetSize())
+			require.ErrorIs(t, err, io.EOF)
+		}
 	})
 
 	t.Run("oss", func(t *testing.T) {
@@ -1295,48 +1305,60 @@ func TestGrib2_ReadMessageAt(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, msg1)
 
-		{
-			t.Log(msg1.GetOffset() + msg1.GetSize())
+		offset := msg1.GetOffset() + msg1.GetSize()
 
-			sec0, err := g.ReadSectionAt(304890452)
+		{
+			sec0, err := g.ReadSectionAt(offset)
 			require.NoError(t, err)
 			require.Equal(t, 0, sec0.Number())
 			require.Equal(t, 16, sec0.Length())
 
-			sec1, err := g.ReadSectionAt(304890452 + 16)
+			sec1, err := g.ReadSectionAt(offset + 16)
 			require.NoError(t, err)
 			require.Equal(t, 1, sec1.Number())
 			require.Equal(t, 21, sec1.Length())
 
-			sec2, err := g.ReadSectionAt(304890452 + 16 + 21)
+			sec2, err := g.ReadSectionAt(offset + 16 + 21)
 			require.NoError(t, err)
 			require.Equal(t, 3, sec2.Number())
 			require.Equal(t, 72, sec2.Length())
 
-			sec4, err := g.ReadSectionAt(304890452 + 16 + 21 + 72)
+			sec4, err := g.ReadSectionAt(offset + 16 + 21 + 72)
 			require.NoError(t, err)
 			require.Equal(t, 4, sec4.Number())
 			require.Equal(t, 34, sec4.Length())
 
-			sec5, err := g.ReadSectionAt(304890452 + 16 + 21 + 72 + 34)
+			sec5, err := g.ReadSectionAt(offset + 16 + 21 + 72 + 34)
 			require.NoError(t, err)
 			require.Equal(t, 5, sec5.Number())
 			require.Equal(t, 21, sec5.Length())
 
-			sec6, err := g.ReadSectionAt(304890452 + 16 + 21 + 72 + 34 + 21)
+			sec6, err := g.ReadSectionAt(offset + 16 + 21 + 72 + 34 + 21)
 			require.NoError(t, err)
 			require.Equal(t, 6, sec6.Number())
 			require.Equal(t, 6, sec6.Length())
 
-			sec7, err := g.ReadSectionAt(304890452 + 16 + 21 + 72 + 34 + 21 + 6)
+			sec7, err := g.ReadSectionAt(offset + 16 + 21 + 72 + 34 + 21 + 6)
 			require.NoError(t, err)
 			require.Equal(t, 7, sec7.Number())
 			require.Equal(t, 1_427_585, sec7.Length())
 
-			sec8, err := g.ReadSectionAt(304890452 + 16 + 21 + 72 + 34 + 21 + 6 + 1_427_585)
+			sec8, err := g.ReadSectionAt(offset + 16 + 21 + 72 + 34 + 21 + 6 + 1_427_585)
 			require.NoError(t, err)
 			require.Equal(t, 8, sec8.Number())
 			require.Equal(t, 4, sec8.Length())
+
+			_, err = g.ReadSectionAt(offset + 16 + 21 + 72 + 34 + 21 + 6 + 1_427_585 + 1)
+			require.ErrorIs(t, err, io.EOF)
+		}
+
+		{
+			lastMsg, err := g.ReadMessageAt(offset)
+			require.NoError(t, err)
+			require.NotNil(t, lastMsg)
+
+			_, err = g.ReadMessageAt(lastMsg.GetOffset() + lastMsg.GetSize())
+			require.ErrorIs(t, err, io.EOF)
 		}
 	})
 }
@@ -1431,6 +1453,6 @@ func TestGrib2_EachMessage(t *testing.T) {
 			require.NotNil(t, msg)
 			return true, nil
 		}))
-		assert.Equal(t, 1, count)
+		assert.Equal(t, 209, count)
 	})
 }
