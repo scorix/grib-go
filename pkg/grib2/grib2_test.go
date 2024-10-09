@@ -1,12 +1,15 @@
 package grib2_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	ossio "github.com/scorix/aliyun-oss-io"
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
@@ -16,6 +19,7 @@ import (
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/mmap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -71,6 +75,15 @@ func assertSection5(t testing.TB, sec grib.Section, template drt.Template) {
 
 	sec5 := sec.(grib2.Section5)
 	assert.EqualExportedValues(t, template, sec5.GetDataRepresentationTemplate())
+}
+
+func assertSection7(t testing.TB, sec grib.Section, dataOffset int64) {
+	t.Helper()
+
+	require.Implements(t, (*grib2.Section7)(nil), sec)
+
+	sec7 := sec.(grib2.Section7)
+	assert.Equal(t, dataOffset, sec7.GetDataOffset())
 }
 
 func TestGrib_ReadSection_SimplePacking(t *testing.T) {
@@ -175,6 +188,7 @@ func TestGrib_ReadSection_SimplePacking(t *testing.T) {
 			name: "section 7",
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 7, 203104)
+				assertSection7(t, sec, 175)
 			},
 		},
 		{
@@ -314,6 +328,7 @@ func TestGrib_ReadSection_ComplexPacking(t *testing.T) {
 			name: "section 7",
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 7, 80823)
+				assertSection7(t, sec, 201)
 			},
 		},
 		{
@@ -457,6 +472,7 @@ func TestGrib_ReadSection_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 			name: "section 7",
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 7, 1476779)
+				assertSection7(t, sec, 203)
 			},
 		},
 		{
@@ -602,6 +618,7 @@ func TestGrib_ReadSection_tmax(t *testing.T) {
 			name: "section 7",
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 7, 499104)
+				assertSection7(t, sec, 227)
 			},
 		},
 		{
@@ -745,6 +762,7 @@ func TestGrib_ReadSection_cwat(t *testing.T) {
 			name: "section 7",
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 7, 402019)
+				assertSection7(t, sec, 203)
 			},
 		},
 		{
@@ -857,6 +875,7 @@ func TestSection7_ReadData_ComplexPacking(t *testing.T) {
 
 		if sec.Number() == 7 {
 			sec7 = sec.(grib2.Section7)
+			require.Equal(t, 80823, sec7.Length())
 
 			break
 		}
@@ -963,6 +982,7 @@ func TestGrib2_ReadMessage(t *testing.T) {
 		assert.Equal(t, "2024-08-20T12:00:00Z", msg.GetTimestamp(time.UTC).Format(time.RFC3339))
 		assert.Equal(t, "2024-08-22T08:00:00Z", msg.GetForecastTime(time.UTC).Format(time.RFC3339))
 		assert.Equal(t, 0, msg.GetLevel())
+		assert.Equal(t, int64(203), msg.GetDataOffset())
 	}
 
 	{
@@ -994,6 +1014,10 @@ func TestGrib2_ReadMessages(t *testing.T) {
 
 		for i := 0; ; i++ {
 			msg, err := g.ReadMessage()
+			if i < 743 && err != nil {
+				t.Fatal(err)
+			}
+
 			if errors.Is(err, io.EOF) {
 				break
 			}
@@ -1003,7 +1027,9 @@ func TestGrib2_ReadMessages(t *testing.T) {
 			msgs = append(msgs, msg)
 		}
 
-		var eg errgroup.Group
+		assert.Equal(t, 743, len(msgs))
+
+		eg, _ := errgroup.WithContext(context.TODO())
 		eg.SetLimit(1)
 		for i, msg := range msgs {
 			eg.Go(func() error {
@@ -1017,7 +1043,6 @@ func TestGrib2_ReadMessages(t *testing.T) {
 		}
 
 		require.NoError(t, eg.Wait())
-		assert.Equal(t, 743, len(msgs))
 	})
 }
 
@@ -1045,5 +1070,228 @@ func TestGrib2_ReadMessage_cwat(t *testing.T) {
 		require.NotNil(t, msg)
 
 		assert.Equal(t, 200, msg.GetTypeOfFirstFixedSurface())
+	})
+
+	t.Run("mmap", func(t *testing.T) {
+		t.Parallel()
+
+		mm, err := mmap.Open(filename)
+		require.NoError(t, err)
+		defer mm.Close()
+
+		g := grib.NewGrib2(mm)
+
+		msg, err := g.ReadMessage()
+		require.NoError(t, err)
+		require.NotNil(t, msg)
+
+		assert.Equal(t, 200, msg.GetTypeOfFirstFixedSurface())
+	})
+}
+
+func TestGrib2_ReadMessageAt(t *testing.T) {
+	t.Parallel()
+
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
+
+		const filename = "../testdata/cwat.grib2"
+
+		f, err := os.Open(filename)
+		if errors.Is(err, os.ErrNotExist) {
+			t.Skipf("%s not exist", filename)
+		}
+
+		require.NoError(t, err)
+		defer f.Close()
+
+		g := grib.NewGrib2(f)
+
+		sec0, err := g.ReadSectionAt(0)
+		require.NoError(t, err)
+		require.Equal(t, 0, sec0.Number())
+		require.Equal(t, 16, sec0.Length())
+
+		sec1, err := g.ReadSectionAt(16)
+		require.NoError(t, err)
+		require.Equal(t, 1, sec1.Number())
+		require.Equal(t, 21, sec1.Length())
+
+		sec2, err := g.ReadSectionAt(37)
+		require.NoError(t, err)
+		require.Equal(t, 3, sec2.Number())
+		require.Equal(t, 72, sec2.Length())
+
+		sec4, err := g.ReadSectionAt(109)
+		require.NoError(t, err)
+		require.Equal(t, 4, sec4.Number())
+		require.Equal(t, 34, sec4.Length())
+
+		sec5, err := g.ReadSectionAt(143)
+		require.NoError(t, err)
+		require.Equal(t, 5, sec5.Number())
+		require.Equal(t, 49, sec5.Length())
+
+		sec6, err := g.ReadSectionAt(192)
+		require.NoError(t, err)
+		require.Equal(t, 6, sec6.Number())
+		require.Equal(t, 6, sec6.Length())
+
+		sec7, err := g.ReadSectionAt(198)
+		require.NoError(t, err)
+		require.Equal(t, 7, sec7.Number())
+		require.Equal(t, 402_019, sec7.Length())
+
+		sec8, err := g.ReadSectionAt(402_217)
+		require.NoError(t, err)
+		require.Equal(t, 8, sec8.Number())
+		require.Equal(t, 4, sec8.Length())
+
+		msg1, err := g.ReadMessageAt(0)
+		require.NoError(t, err)
+		require.NotNil(t, msg1)
+	})
+
+	t.Run("mmap", func(t *testing.T) {
+		t.Parallel()
+
+		const filename = "../testdata/cwat.grib2"
+
+		f, err := mmap.Open(filename)
+		if errors.Is(err, os.ErrNotExist) {
+			t.Skipf("%s not exist", filename)
+		}
+
+		require.NoError(t, err)
+		defer f.Close()
+
+		g := grib.NewGrib2(f)
+
+		sec0, err := g.ReadSectionAt(0)
+		require.NoError(t, err)
+		require.Equal(t, 0, sec0.Number())
+		require.Equal(t, 16, sec0.Length())
+
+		sec1, err := g.ReadSectionAt(16)
+		require.NoError(t, err)
+		require.Equal(t, 1, sec1.Number())
+		require.Equal(t, 21, sec1.Length())
+
+		sec2, err := g.ReadSectionAt(37)
+		require.NoError(t, err)
+		require.Equal(t, 3, sec2.Number())
+		require.Equal(t, 72, sec2.Length())
+
+		sec4, err := g.ReadSectionAt(109)
+		require.NoError(t, err)
+		require.Equal(t, 4, sec4.Number())
+		require.Equal(t, 34, sec4.Length())
+
+		sec5, err := g.ReadSectionAt(143)
+		require.NoError(t, err)
+		require.Equal(t, 5, sec5.Number())
+		require.Equal(t, 49, sec5.Length())
+
+		sec6, err := g.ReadSectionAt(192)
+		require.NoError(t, err)
+		require.Equal(t, 6, sec6.Number())
+		require.Equal(t, 6, sec6.Length())
+
+		sec7, err := g.ReadSectionAt(198)
+		require.NoError(t, err)
+		require.Equal(t, 7, sec7.Number())
+		require.Equal(t, 402_019, sec7.Length())
+
+		sec8, err := g.ReadSectionAt(402_217)
+		require.NoError(t, err)
+		require.Equal(t, 8, sec8.Number())
+		require.Equal(t, 4, sec8.Length())
+
+		msg1, err := g.ReadMessageAt(0)
+		require.NoError(t, err)
+		require.NotNil(t, msg1)
+	})
+
+	t.Run("oss", func(t *testing.T) {
+		t.Parallel()
+
+		const (
+			bucketName = "cy-meteorology"
+			key        = "noaa-gfs/develop/2024/09/30/18/atmos/0p25/2t_heightAboveGround_2_0_0.grib2"
+			msgOffset  = 0
+		)
+
+		var (
+			endpoint        = os.Getenv("ALIYUN_OSS_ENDPOINT")
+			accessKeyId     = os.Getenv("ALIYUN_OSS_ACCESS_KEY_ID")
+			accessKeySecret = os.Getenv("ALIYUN_OSS_ACCESS_KEY_SECRET")
+		)
+
+		ctx := context.TODO()
+		cli, err := oss.New(
+			endpoint,
+			accessKeyId,
+			accessKeySecret,
+		)
+		if err != nil {
+			t.Skip(err.Error())
+		}
+
+		bucket, err := cli.Bucket(bucketName)
+		require.NoError(t, err)
+
+		r, err := ossio.NewReader(ctx, bucket, key)
+		require.NoError(t, err)
+
+		p := make([]byte, 16)
+		n, err := r.ReadAt(p, msgOffset)
+		require.Equal(t, 16, n)
+		require.NoError(t, err)
+
+		g := grib.NewGrib2(r)
+
+		sec0, err := g.ReadSectionAt(0)
+		require.NoError(t, err)
+		require.Equal(t, 0, sec0.Number())
+		require.Equal(t, 16, sec0.Length())
+
+		sec1, err := g.ReadSectionAt(16)
+		require.NoError(t, err)
+		require.Equal(t, 1, sec1.Number())
+		require.Equal(t, 21, sec1.Length())
+
+		sec2, err := g.ReadSectionAt(37)
+		require.NoError(t, err)
+		require.Equal(t, 3, sec2.Number())
+		require.Equal(t, 72, sec2.Length())
+
+		sec4, err := g.ReadSectionAt(109)
+		require.NoError(t, err)
+		require.Equal(t, 4, sec4.Number())
+		require.Equal(t, 34, sec4.Length())
+
+		sec5, err := g.ReadSectionAt(143)
+		require.NoError(t, err)
+		require.Equal(t, 5, sec5.Number())
+		require.Equal(t, 21, sec5.Length())
+
+		sec6, err := g.ReadSectionAt(164)
+		require.NoError(t, err)
+		require.Equal(t, 6, sec6.Number())
+		require.Equal(t, 6, sec6.Length())
+
+		sec7, err := g.ReadSectionAt(170)
+		require.NoError(t, err)
+		require.Equal(t, 7, sec7.Number())
+		require.Equal(t, 1_427_585, sec7.Length())
+
+		sec8, err := g.ReadSectionAt(1_427_755)
+		require.NoError(t, err)
+		require.Equal(t, 8, sec8.Number())
+		require.Equal(t, 4, sec8.Length())
+
+		msg1, err := g.ReadMessageAt(0)
+		require.NoError(t, err)
+		require.NotNil(t, msg1)
 	})
 }

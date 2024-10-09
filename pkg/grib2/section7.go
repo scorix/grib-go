@@ -15,6 +15,7 @@ import (
 type Section7 interface {
 	Section
 	GetData(drt.Template) ([]float64, error)
+	GetDataOffset() int64
 }
 
 type section7 struct {
@@ -37,8 +38,9 @@ func (s *section7) Number() int {
 
 func (s *section7) readFrom(r io.ReaderAt, offset int64, length int64) error {
 	p := make([]byte, length)
-	if _, err := r.ReadAt(p, offset); err != nil {
-		return fmt.Errorf("read %d bytes at %d: %w", length, offset, err)
+
+	if n, err := r.ReadAt(p, offset); err != nil {
+		return fmt.Errorf("read %d bytes at %d: %w", n, offset, err)
 	}
 
 	n, err := binary.Decode(p, binary.BigEndian, &s.Section7.Section7FixedPart)
@@ -53,12 +55,16 @@ func (s *section7) readFrom(r io.ReaderAt, offset int64, length int64) error {
 	return nil
 }
 
+func (s *section7) GetDataOffset() int64 {
+	return s.dataOffset
+}
+
 func (s *section7) LoadData() error {
 	s.readDataOnce.Do(func() {
 		data := make([]byte, s.dataSize)
-		_, err := s.dataReader.ReadAt(data, s.dataOffset)
+		n, err := s.dataReader.ReadAt(data, s.dataOffset)
 		if err != nil {
-			s.readDataErr = err
+			s.readDataErr = fmt.Errorf("load data: total %d, read %d, offset %d: %w", n, s.dataSize, s.dataOffset, err)
 		}
 
 		s.Section7.Data = data
