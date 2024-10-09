@@ -15,8 +15,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
-github.com/scorix/aliyun-oss-io v0.3.0 h1:NIjMaGwtrlbJGhAY3y0CpxwI5ps4NfpuxGPzqys5ayw=
-github.com/scorix/aliyun-oss-io v0.3.0/go.mod h1:A4UMOXpdFPvkGRghKNT4l6jD82Kx7I+z9fwF3nGYqUU=
+github.com/scorix/aliyun-oss-io v0.3.1 h1:bIhghFUmjzZmCx7E9XG3SLNw0wwDh/jqy712EGDj+A0=
+github.com/scorix/aliyun-oss-io v0.3.1/go.mod h1:A4UMOXpdFPvkGRghKNT4l6jD82Kx7I+z9fwF3nGYqUU=
 github.com/scorix/go-eccodes v0.1.5 h1:9J7fRAp0NtBXjSSPjkGOxFZ5Q2vjwamgq6oJXY90hss=
 github.com/scorix/go-eccodes v0.1.5/go.mod h1:z+mLm8dCG+FA+bMQjS3ENWMXE+JwJw6UBGCU+8eUKAk=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=

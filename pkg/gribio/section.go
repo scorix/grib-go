@@ -28,14 +28,14 @@ func NewGribSectionReader(r io.ReaderAt) SectionReader {
 }
 
 func discernSection(r io.ReaderAt, offset int64) (uint8, uint32, error) {
-	bs := make([]byte, 16)
+	bs := make([]byte, 5)
 
 	n, err := r.ReadAt(bs, offset)
 	if n >= 4 && bs[0] == '7' && bs[1] == '7' && bs[2] == '7' && bs[3] == '7' {
 		return 8, 4, nil
 	}
 
-	if n == 16 && bs[0] == 'G' && bs[1] == 'R' && bs[2] == 'I' && bs[3] == 'B' {
+	if n >= 4 && bs[0] == 'G' && bs[1] == 'R' && bs[2] == 'I' && bs[3] == 'B' {
 		return 0, 16, nil
 	}
 

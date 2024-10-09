@@ -2,7 +2,6 @@ package grib2
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"sync"
@@ -37,19 +36,13 @@ func (s *section7) Number() int {
 }
 
 func (s *section7) readFrom(r io.ReaderAt, offset int64, length int64) error {
-	p := make([]byte, length)
-
-	if n, err := r.ReadAt(p, offset); err != nil {
-		return fmt.Errorf("read %d bytes at %d: %w", n, offset, err)
+	s.Section7.Section7FixedPart = definition.Section7FixedPart{
+		Section7Length:  uint32(length),
+		NumberOfSection: 7,
 	}
 
-	n, err := binary.Decode(p, binary.BigEndian, &s.Section7.Section7FixedPart)
-	if err != nil {
-		return fmt.Errorf("binary read: %w", err)
-	}
-
-	s.dataSize = int64(s.Section7.Section7Length) - int64(n)
-	s.dataOffset = offset + int64(n)
+	s.dataSize = int64(s.Section7.Section7Length - 5)
+	s.dataOffset = offset + 5
 	s.dataReader = r
 
 	return nil
