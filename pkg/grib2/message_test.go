@@ -51,7 +51,7 @@ func TestMessageReader_ReadLL(t *testing.T) {
 
 		g := grib.NewGrib2(f)
 
-		msg, err := g.ReadMessage()
+		msg, err := g.ReadMessageAt(0)
 		require.NoError(t, err)
 		require.NotNil(t, msg)
 

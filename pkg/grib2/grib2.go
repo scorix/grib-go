@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sync"
-	"sync/atomic"
 
 	"github.com/scorix/grib-go/pkg/gribio"
 )
@@ -39,22 +37,7 @@ func NewGrib2(r io.ReaderAt) *Grib2 {
 
 type Grib2 struct {
 	io.ReaderAt
-	r      gribio.SectionReader
-	offset int64
-	cursor int64
-
-	msgLock sync.Mutex
-}
-
-func (g *Grib2) ReadSection() (Section, error) {
-	s, err := g.ReadSectionAt(g.cursor)
-	if err != nil {
-		return nil, err
-	}
-
-	atomic.AddInt64(&g.cursor, int64(s.Length()))
-
-	return s, nil
+	r gribio.SectionReader
 }
 
 func (g *Grib2) ReadSectionAt(offset int64) (Section, error) {
@@ -83,7 +66,7 @@ func (g *Grib2) wrapSection(sec gribio.GribSection) (Section, error) {
 	readLen := sec.Length()
 
 	if s.Number() == 7 {
-		readLen = 255
+		readLen = 5
 	}
 
 	if err := s.readFrom(sec.Reader(), sec.Offset(), int64(readLen)); err != nil {
@@ -91,21 +74,6 @@ func (g *Grib2) wrapSection(sec gribio.GribSection) (Section, error) {
 	}
 
 	return s, nil
-}
-
-func (g *Grib2) ReadMessage() (IndexedMessage, error) {
-	g.msgLock.Lock()
-	defer g.msgLock.Unlock()
-
-	m, err := g.readIndexedMessageAt(g.offset)
-	if err != nil {
-		return nil, fmt.Errorf("read message: %w", err)
-	}
-
-	atomic.AddInt64(&g.offset, m.GetSize())
-	atomic.AddInt64(&g.cursor, m.GetSize())
-
-	return m, nil
 }
 
 func (g *Grib2) ReadMessageAt(offset int64) (IndexedMessage, error) {
@@ -161,8 +129,10 @@ ReadAllSections:
 }
 
 func (g *Grib2) EachMessage(f func(m IndexedMessage) (next bool, err error)) error {
+	var offset int64
+
 	for {
-		m, err := g.ReadMessage()
+		m, err := g.ReadMessageAt(offset)
 
 		if errors.Is(err, io.EOF) {
 			return nil
@@ -171,6 +141,8 @@ func (g *Grib2) EachMessage(f func(m IndexedMessage) (next bool, err error)) err
 		if err != nil {
 			return fmt.Errorf("read message: %w", err)
 		}
+
+		offset += m.GetSize()
 
 		next, err := f(m)
 		if err != nil {
