@@ -42,6 +42,7 @@ func (f *DefaultSectionFactory) CreateSection(number int) (Section, error) {
 
 // Grib2Reader uses the strategy pattern to define an interface for reading Grib2 data
 type Grib2Reader interface {
+	Reader() io.ReaderAt
 	ReadSectionAt(offset int64) (Section, error)
 	ReadMessageAt(offset int64) (IndexedMessage, error)
 	EachMessage(f func(m IndexedMessage) (next bool, err error)) error
@@ -140,4 +141,8 @@ func (g *grib2) EachMessage(f func(m IndexedMessage) (next bool, err error)) err
 
 		offset += m.GetSize()
 	}
+}
+
+func (g *grib2) Reader() io.ReaderAt {
+	return g.ReaderAt
 }
