@@ -69,7 +69,7 @@ func TestMessageReader_ReadLL(t *testing.T) {
 		sm, err := msg.GetScanningMode()
 		require.NoError(t, err)
 
-		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetDataOffset(), msg.GetSize()+msg.GetOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), sm)
+		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetOffset(), msg.GetSize(), msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), sm)
 		require.NoError(t, err)
 
 		for i := 0; iter.HasNext(); i++ {

@@ -239,12 +239,12 @@ func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage) (
 		return nil, fmt.Errorf("get scanning mode: %w", err)
 	}
 
-	return NewSimplePackingMessageReader(r, m.GetDataOffset(), m.GetSize()+m.GetOffset(), sp, sm)
+	return NewSimplePackingMessageReader(r, m.GetOffset(), m.GetSize(), m.GetDataOffset(), sp, sm)
 }
 
-func NewSimplePackingMessageReader(r io.ReaderAt, dataOffset int64, size int64, sp *gridpoint.SimplePacking, sm gdt.ScanningMode) (MessageReader, error) {
+func NewSimplePackingMessageReader(r io.ReaderAt, messageOffset int64, messageSize int64, dataOffset int64, sp *gridpoint.SimplePacking, sm gdt.ScanningMode) (MessageReader, error) {
 	return &simplePackingMessageReader{
-		spr: gridpoint.NewSimplePackingReader(r, dataOffset, size, sp),
+		spr: gridpoint.NewSimplePackingReader(r, dataOffset, messageOffset+messageSize, sp),
 		sp:  sp,
 		sm:  sm,
 	}, nil
@@ -252,13 +252,12 @@ func NewSimplePackingMessageReader(r io.ReaderAt, dataOffset int64, size int64, 
 
 func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float64, error) {
 	grid := r.sm.GetGridPointFromLL(lat, lon)
+	lat, lng := r.sm.GetGridPointLL(grid)
 
 	v, err := r.spr.ReadGridAt(grid)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("read grid at point %d (lat: %f, lon: %f): %w", grid, lat, lon, err)
 	}
-
-	lat, lng := r.sm.GetGridPointLL(grid)
 
 	return lat, lng, v, nil
 }
