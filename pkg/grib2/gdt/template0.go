@@ -96,6 +96,8 @@ type Template0FixedPart struct {
 }
 
 type ScanningMode interface {
+	GetScanMode() int8
+
 	GetGridPointLL(n int) (float32, float32)
 	GetGridPointFromLL(lat float32, lng float32) int
 }
@@ -183,6 +185,10 @@ func (sm *ScanningMode0000) GetGridPointLL(n int) (float32, float32) {
 
 func (sm *ScanningMode0000) GetGridPointFromLL(lat float32, lng float32) int {
 	return sm.GetLatitudeGridIndex(lat)*int(sm.Ni) + sm.GetLongitudeGridIndex(lng)
+}
+
+func (sm *ScanningMode0000) GetScanMode() int8 {
+	return 0
 }
 
 func toInt(v float32) int {

@@ -40,6 +40,18 @@ func TestToInt(t *testing.T) {
 	assert.Equal(t, -64651, regulation.ToInt(0b100000001111110010001011, 24))
 }
 
+func TestToUint(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, uint(255), regulation.ToUint(255, 8))
+	assert.Equal(t, uint(65535), regulation.ToUint(65535, 16))
+	assert.Equal(t, uint(16777215), regulation.ToUint(16777215, 24))
+	assert.Equal(t, uint(4294967295), regulation.ToUint(4294967295, 32))
+
+	assert.EqualValues(t, uint16(math.MaxUint16), uint16(regulation.ToUint(-1, 16)))
+	assert.EqualValues(t, uint32(2237483648), uint32(regulation.ToUint(-90000000, 32)))
+}
+
 func TestIsMissingValue(t *testing.T) {
 	t.Parallel()
 

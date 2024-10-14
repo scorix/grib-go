@@ -10,6 +10,7 @@ import (
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
+	"github.com/scorix/grib-go/pkg/grib2/gdt"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/mmap"
@@ -96,4 +97,72 @@ func TestMessageReader_ReadLL(t *testing.T) {
 
 		}
 	})
+}
+
+func TestMessage_DumpMessageIndex(t *testing.T) {
+	t.Parallel()
+
+	// grib_set -r -s packingType=grid_simple pkg/testdata/hpbl.grib2 pkg/testdata/hpbl.grib2.out
+	const filename = "../testdata/hpbl.grib2.out"
+
+	s, err := os.Stat(filename)
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skipf("%s not exist", filename)
+	}
+
+	mm, err := mmap.Open(filename)
+	require.NoError(t, err)
+	defer mm.Close()
+
+	g := grib.NewGrib2(mm)
+
+	msg, err := g.ReadMessageAt(0)
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+
+	tests := []struct {
+		name    string
+		message grib.Message
+		want    *grib.MessageIndex
+		wantErr bool
+	}{
+		{
+			name:    s.Name(),
+			message: msg,
+			want: &grib.MessageIndex{
+				Offset:     0,
+				Size:       2206439,
+				DataOffset: 175,
+				ScanningMode: gdt.ScanningMode(&gdt.ScanningMode0000{
+					Ni:                          1440,
+					Nj:                          721,
+					LatitudeOfFirstGridPoint:    90000000,
+					LongitudeOfFirstGridPoint:   0,
+					ResolutionAndComponentFlags: 48,
+					LatitudeOfLastGridPoint:     -90000000,
+					LongitudeOfLastGridPoint:    359750000,
+					IDirectionIncrement:         250000,
+					JDirectionIncrement:         250000,
+				}),
+				Packing: &gridpoint.SimplePacking{
+					R:    7.728597,
+					E:    -4,
+					D:    0,
+					Bits: 17,
+					Type: 0,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := tt.message.DumpMessageIndex()
+			require.NoError(t, err)
+			require.EqualExportedValues(t, tt.want, got)
+		})
+	}
 }

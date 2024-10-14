@@ -1,7 +1,10 @@
 package drt
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
@@ -36,6 +39,8 @@ const (
 )
 
 type Template interface {
+	GetNumVals() int
+	Definition() any
 	ReadAllData(r datapacking.BitReader) ([]float64, error)
 }
 
@@ -71,4 +76,86 @@ func ReadTemplate(r datapacking.BitReader, n TemplateNumber, numVals int) (Templ
 	}
 
 	return nil, fmt.Errorf("data template not implemented: %d", n)
+}
+
+// TemplateMarshaler
+type TemplateMarshaler struct {
+	Template Template
+}
+
+type templateMarshaler struct {
+	Number  TemplateNumber `json:"number"`
+	Content string         `json:"content"`
+	Vals    int            `json:"vals"`
+}
+
+func (tm TemplateMarshaler) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+
+	if err := binary.Write(&buf, binary.BigEndian, tm.Template.Definition()); err != nil {
+		return nil, err
+	}
+
+	var tplNum TemplateNumber
+	switch tm.Template.(type) {
+	case *gridpoint.SimplePacking:
+		tplNum = GridPointDataSimplePacking
+	case *gridpoint.ComplexPacking:
+		tplNum = GridPointDataComplexPacking
+	case *gridpoint.ComplexPackingAndSpatialDifferencing:
+		tplNum = GridPointDataComplexPackingAndSpatialDifferencing
+	}
+
+	return json.Marshal(templateMarshaler{
+		Number:  tplNum,
+		Content: hex.EncodeToString(buf.Bytes()),
+		Vals:    tm.Template.GetNumVals(),
+	})
+}
+
+func (tm *TemplateMarshaler) UnmarshalJSON(data []byte) error {
+	var t templateMarshaler
+
+	if err := json.Unmarshal(data, &t); err != nil {
+		return err
+	}
+
+	decoded, err := hex.DecodeString(t.Content)
+	if err != nil {
+		return err
+	}
+
+	switch t.Number {
+	case GridPointDataSimplePacking:
+		var tplDef definition.SimplePacking
+
+		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &tplDef); err != nil {
+			return err
+		}
+
+		tm.Template = gridpoint.NewSimplePacking(tplDef, t.Vals)
+		return nil
+
+	case GridPointDataComplexPacking:
+		var tplDef definition.ComplexPacking
+
+		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &tplDef); err != nil {
+			return err
+		}
+
+		tm.Template = gridpoint.NewComplexPacking(tplDef, t.Vals)
+		return nil
+
+	case GridPointDataComplexPackingAndSpatialDifferencing:
+		var tplDef definition.ComplexPackingAndSpatialDifferencing
+
+		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &tplDef); err != nil {
+			return err
+		}
+
+		tm.Template = gridpoint.NewComplexPackingAndSpatialDifferencing(tplDef, t.Vals)
+		return nil
+	}
+
+	return fmt.Errorf("data template not implemented: %d", t.Number)
 }
