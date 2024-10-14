@@ -9,6 +9,8 @@ import (
 	cio "github.com/scorix/go-eccodes/io"
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
+	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
+	"github.com/scorix/grib-go/pkg/grib2/gdt"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/mmap"
@@ -26,6 +28,8 @@ func TestMessageReader_ReadLL(t *testing.T) {
 	}
 
 	t.Run(s.Name(), func(t *testing.T) {
+		t.Parallel()
+
 		f, err := os.Open(filename)
 		require.NoError(t, err)
 		defer f.Close()
@@ -63,7 +67,10 @@ func TestMessageReader_ReadLL(t *testing.T) {
 		mm, err := mmap.Open(f.Name())
 		require.NoError(t, err)
 
-		reader, err := grib2.NewSimplePackingMessageReader(mm, msg)
+		sm, err := msg.GetScanningMode()
+		require.NoError(t, err)
+
+		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetOffset(), msg.GetSize(), msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), sm)
 		require.NoError(t, err)
 
 		for i := 0; iter.HasNext(); i++ {
@@ -76,18 +83,86 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
 			{
-				v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 
 			{
 				// read again
-				v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 
 		}
 	})
+}
+
+func TestMessage_DumpMessageIndex(t *testing.T) {
+	t.Parallel()
+
+	// grib_set -r -s packingType=grid_simple pkg/testdata/hpbl.grib2 pkg/testdata/hpbl.grib2.out
+	const filename = "../testdata/hpbl.grib2.out"
+
+	s, err := os.Stat(filename)
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skipf("%s not exist", filename)
+	}
+
+	mm, err := mmap.Open(filename)
+	require.NoError(t, err)
+	defer mm.Close()
+
+	g := grib.NewGrib2(mm)
+
+	msg, err := g.ReadMessageAt(0)
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+
+	tests := []struct {
+		name    string
+		message grib.Message
+		want    *grib.MessageIndex
+		wantErr bool
+	}{
+		{
+			name:    s.Name(),
+			message: msg,
+			want: &grib.MessageIndex{
+				Offset:     0,
+				Size:       2206439,
+				DataOffset: 175,
+				ScanningMode: gdt.ScanningMode(&gdt.ScanningMode0000{
+					Ni:                          1440,
+					Nj:                          721,
+					LatitudeOfFirstGridPoint:    90000000,
+					LongitudeOfFirstGridPoint:   0,
+					ResolutionAndComponentFlags: 48,
+					LatitudeOfLastGridPoint:     -90000000,
+					LongitudeOfLastGridPoint:    359750000,
+					IDirectionIncrement:         250000,
+					JDirectionIncrement:         250000,
+				}),
+				Packing: &gridpoint.SimplePacking{
+					R:    7.728597,
+					E:    -4,
+					D:    0,
+					Bits: 17,
+					Type: 0,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := tt.message.DumpMessageIndex()
+			require.NoError(t, err)
+			require.EqualExportedValues(t, tt.want, got)
+		})
+	}
 }

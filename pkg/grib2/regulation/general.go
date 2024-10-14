@@ -45,12 +45,24 @@ func ToInt8(v uint8) int8 {
 	return int8(ToInt(int(v), 8))
 }
 
+func ToUint8(v int8) uint8 {
+	return uint8(ToUint(int(v), 8))
+}
+
 func ToInt16(v uint16) int16 {
 	return int16(ToInt(int(v), 16))
 }
 
+func ToUint16(v int16) uint16 {
+	return uint16(ToUint(int(v), 16))
+}
+
 func ToInt32(v uint32) int32 {
 	return int32(ToInt(int(v), 32))
+}
+
+func ToUint32(v int32) uint32 {
+	return uint32(ToUint(int(v), 32))
 }
 
 func ToInt(v int, bits int) int {
@@ -63,11 +75,28 @@ func ToInt(v int, bits int) int {
 		flag = flag << 1
 	}
 
-	if negtive := v&flag > 0; negtive {
+	if negative := v&flag > 0; negative {
 		return -(v & (flag - 1))
 	}
 
 	return v & (flag - 1)
+}
+
+func ToUint(v int, bits int) uint {
+	if IsMissingValue(uint(v), bits) {
+		return uint(v)
+	}
+
+	var flag uint = 1
+	for range bits - 1 {
+		flag = flag << 1
+	}
+
+	if negative := v&int(flag) > 0; negative {
+		return uint(-(v & (int(flag) - 1)))
+	}
+
+	return uint(v & (int(flag) - 1))
 }
 
 // 92.1.4

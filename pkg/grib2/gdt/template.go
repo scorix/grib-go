@@ -1,7 +1,10 @@
 package gdt
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 )
@@ -37,4 +40,53 @@ func ReadTemplate(r io.Reader, n uint16) (Template, error) {
 	default:
 		return nil, fmt.Errorf("unsupported grid definition template: %d", n)
 	}
+}
+
+type ScanningModeMarshaler struct {
+	Template ScanningMode
+}
+
+type scanningModeMarshaler struct {
+	Mode    int8   `json:"mode"`
+	Content string `json:"content"`
+}
+
+func (sm ScanningModeMarshaler) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	if err := binary.Write(&buf, binary.BigEndian, sm.Template); err != nil {
+		return nil, err
+	}
+
+	m := scanningModeMarshaler{
+		Mode:    sm.Template.GetScanMode(),
+		Content: hex.EncodeToString(buf.Bytes()),
+	}
+
+	return json.Marshal(m)
+}
+
+func (sm *ScanningModeMarshaler) UnmarshalJSON(data []byte) error {
+	var m scanningModeMarshaler
+
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+
+	switch m.Mode {
+	case 0:
+		var mode ScanningMode0000
+		decoded, err := hex.DecodeString(m.Content)
+		if err != nil {
+			return err
+		}
+
+		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &mode); err != nil {
+			return err
+		}
+
+		sm.Template = &mode
+		return nil
+	}
+
+	return fmt.Errorf("unsupported scanning mode: %d", m.Mode)
 }

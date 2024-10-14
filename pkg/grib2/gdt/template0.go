@@ -96,6 +96,8 @@ type Template0FixedPart struct {
 }
 
 type ScanningMode interface {
+	GetScanMode() int8
+
 	GetGridPointLL(n int) (float32, float32)
 	GetGridPointFromLL(lat float32, lng float32) int
 }
@@ -156,12 +158,12 @@ func (sm *ScanningMode0000) GetLatitudeGridIndex(lat float32) int {
 		inc = -inc
 	}
 
-	return (int(latFirst) - toInt(lat)) / int(inc)
+	return int(math.Round(float64(int(latFirst)-toInt(lat)) / float64(inc)))
 }
 
 func (sm *ScanningMode0000) GetLongitudeGridPoint(n int) int {
 	lonFirst, lonLast, inc := sm.LongitudeOfFirstGridPoint, sm.LongitudeOfLastGridPoint, sm.JDirectionIncrement
-	if (lonFirst-lonLast)/sm.IDirectionIncrement < 0 {
+	if (lonFirst-lonLast)/sm.JDirectionIncrement < 0 {
 		inc = -inc
 	}
 
@@ -170,11 +172,11 @@ func (sm *ScanningMode0000) GetLongitudeGridPoint(n int) int {
 
 func (sm *ScanningMode0000) GetLongitudeGridIndex(lng float32) int {
 	lonFirst, lonLast, inc := sm.LongitudeOfFirstGridPoint, sm.LongitudeOfLastGridPoint, sm.JDirectionIncrement
-	if (lonFirst-lonLast)/sm.IDirectionIncrement < 0 {
+	if (lonFirst-lonLast)/sm.JDirectionIncrement < 0 {
 		inc = -inc
 	}
 
-	return (int(lonFirst) - toInt(lng)) / int(inc)
+	return int(math.Round(float64(int(lonFirst)-toInt(lng)) / float64(inc)))
 }
 
 func (sm *ScanningMode0000) GetGridPointLL(n int) (float32, float32) {
@@ -185,8 +187,10 @@ func (sm *ScanningMode0000) GetGridPointFromLL(lat float32, lng float32) int {
 	return sm.GetLatitudeGridIndex(lat)*int(sm.Ni) + sm.GetLongitudeGridIndex(lng)
 }
 
-func toInt(v float32) int {
-	i := math.Floor(float64(v) * 1e6)
+func (sm *ScanningMode0000) GetScanMode() int8 {
+	return 0
+}
 
-	return int(i)
+func toInt(v float32) int {
+	return int(math.Round(float64(v) * 1e6))
 }

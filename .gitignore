@@ -4,3 +4,4 @@ pkg/testdata/**/gfs.*
 **/.DS_Store
 
 *.out
+.env

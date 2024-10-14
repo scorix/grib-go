@@ -1,6 +1,7 @@
 package gridpoint
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 
@@ -53,8 +54,8 @@ func (cp *ComplexPacking) missingValueSubstitute() (float64, float64, error) {
 type scaleGroupDataFunc func(data []uint32, missing []uint32, primary float64, secondary float64, scaleFunc func(uint32) float64) ([]float64, error)
 
 func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []Group, f scaleGroupDataFunc) ([]float64, error) {
-	data := make([]uint32, cp.numVals)
-	miss := make([]uint32, 0, cp.numVals)
+	data := make([]uint32, cp.NumVals)
+	miss := make([]uint32, 0, cp.NumVals)
 	idx := 0
 
 	primary, secondary, err := cp.missingValueSubstitute()
@@ -68,8 +69,8 @@ func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []Group, f 
 			return nil, fmt.Errorf("read (%d) data: %w", idx, err)
 		}
 
-		if idx+1 > cp.numVals {
-			return nil, fmt.Errorf("got more than %d values", cp.numVals)
+		if idx+1 > cp.NumVals {
+			return nil, fmt.Errorf("got more than %d values", cp.NumVals)
 		}
 
 		missingValueBits := g.width
@@ -158,6 +159,62 @@ func (cp *ComplexPacking) scaleValues(data []uint32, miss []uint32, primary floa
 	}
 
 	return values, nil
+}
+
+func (cp *ComplexPacking) Definition() any {
+	return definition.ComplexPacking{
+		SimplePacking:              cp.SimplePacking.Definition().(definition.SimplePacking),
+		GroupSplittingMethodUsed:   regulation.ToUint8(cp.GroupSplittingMethodUsed),
+		MissingValueManagementUsed: regulation.ToUint8(cp.MissingValueManagementUsed),
+		PrimaryMissingSubstitute:   regulation.ToUint32(cp.PrimaryMissingSubstitute),
+		SecondaryMissingSubstitute: regulation.ToUint32(cp.SecondaryMissingSubstitute),
+		NumberOfGroups:             regulation.ToUint32(cp.NumberOfGroups),
+		GroupWidths:                cp.Grouping.Widths,
+		GroupWidthsBits:            cp.Grouping.WidthsBits,
+		GroupLengthsReference:      cp.Grouping.LengthsReference,
+		GroupLengthIncrement:       cp.Grouping.LengthIncrement,
+		GroupLastLength:            cp.Grouping.LastLength,
+		GroupScaledLengthsBits:     cp.Grouping.ScaledLengthsBits,
+	}
+}
+
+type complexPacking struct {
+	SimplePacking              *SimplePacking `json:"simple_packing"`
+	GroupSplittingMethodUsed   int8           `json:"group_splitting_method_used"`
+	MissingValueManagementUsed int8           `json:"missing_value_management_used"`
+	PrimaryMissingSubstitute   int32          `json:"primary_missing_substitute"`
+	SecondaryMissingSubstitute int32          `json:"secondary_missing_substitute"`
+	Grouping                   *Grouping      `json:"grouping"`
+	NumVals                    int            `json:"num_vals"`
+}
+
+func (cp *ComplexPacking) MarshalJSON() ([]byte, error) {
+	return json.Marshal(complexPacking{
+		SimplePacking:              cp.SimplePacking,
+		GroupSplittingMethodUsed:   cp.GroupSplittingMethodUsed,
+		MissingValueManagementUsed: cp.MissingValueManagementUsed,
+		PrimaryMissingSubstitute:   cp.PrimaryMissingSubstitute,
+		SecondaryMissingSubstitute: cp.SecondaryMissingSubstitute,
+		Grouping:                   cp.Grouping,
+		NumVals:                    cp.NumVals,
+	})
+}
+
+func (cp *ComplexPacking) UnmarshalJSON(data []byte) error {
+	var temp complexPacking
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	cp.SimplePacking = temp.SimplePacking
+	cp.GroupSplittingMethodUsed = temp.GroupSplittingMethodUsed
+	cp.MissingValueManagementUsed = temp.MissingValueManagementUsed
+	cp.PrimaryMissingSubstitute = temp.PrimaryMissingSubstitute
+	cp.SecondaryMissingSubstitute = temp.SecondaryMissingSubstitute
+	cp.Grouping = temp.Grouping
+	cp.NumVals = temp.NumVals
+	return nil
 }
 
 type Grouping struct {
@@ -250,4 +307,44 @@ func (g *Group) ReadData(r datapacking.BitReader) ([]uint32, error) {
 	}
 
 	return data, nil
+}
+
+type grouping struct {
+	NumberOfGroups    int32  `json:"number_of_groups"`
+	Widths            uint8  `json:"widths"`
+	WidthsBits        uint8  `json:"widths_bits"`
+	LengthsReference  uint32 `json:"lengths_reference"`
+	LengthIncrement   uint8  `json:"length_increment"`
+	LastLength        uint32 `json:"last_length"`
+	ScaledLengthsBits uint8  `json:"scaled_lengths_bits"`
+}
+
+func (g Grouping) MarshalJSON() ([]byte, error) {
+	return json.Marshal(grouping{
+		NumberOfGroups:    g.NumberOfGroups,
+		Widths:            g.Widths,
+		WidthsBits:        g.WidthsBits,
+		LengthsReference:  g.LengthsReference,
+		LengthIncrement:   g.LengthIncrement,
+		LastLength:        g.LastLength,
+		ScaledLengthsBits: g.ScaledLengthsBits,
+	})
+}
+
+func (g *Grouping) UnmarshalJSON(data []byte) error {
+	var gg grouping
+
+	if err := json.Unmarshal(data, &gg); err != nil {
+		return err
+	}
+
+	g.NumberOfGroups = gg.NumberOfGroups
+	g.Widths = gg.Widths
+	g.WidthsBits = gg.WidthsBits
+	g.LengthsReference = gg.LengthsReference
+	g.LengthIncrement = gg.LengthIncrement
+	g.LastLength = gg.LastLength
+	g.ScaledLengthsBits = gg.ScaledLengthsBits
+
+	return nil
 }

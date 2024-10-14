@@ -29,6 +29,7 @@ type Message interface {
 	GetNi() int
 	GetNj() int
 	GetSize() int64
+	DumpMessageIndex() (*MessageIndex, error)
 }
 
 type IndexedMessage interface {
@@ -218,8 +219,23 @@ func (m *message) assignSection(sec Section) error {
 	return nil
 }
 
+func (m *message) DumpMessageIndex() (*MessageIndex, error) {
+	sm, err := m.GetScanningMode()
+	if err != nil {
+		return nil, fmt.Errorf("get scanning mode: %w", err)
+	}
+
+	return &MessageIndex{
+		Offset:       m.offset,
+		Size:         m.GetSize(),
+		DataOffset:   m.GetDataOffset(),
+		ScanningMode: sm,
+		Packing:      m.GetDataRepresentationTemplate(),
+	}, nil
+}
+
 type MessageReader interface {
-	ReadLL(float32, float32) (float64, error)
+	ReadLL(float32, float32) (float32, float32, float64, error)
 }
 
 type simplePackingMessageReader struct {
@@ -228,7 +244,7 @@ type simplePackingMessageReader struct {
 	sm  gdt.ScanningMode
 }
 
-func NewSimplePackingMessageReader(r io.ReaderAt, m IndexedMessage) (MessageReader, error) {
+func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage) (MessageReader, error) {
 	sp, ok := m.GetDataRepresentationTemplate().(*gridpoint.SimplePacking)
 	if !ok {
 		return nil, fmt.Errorf("unsupported data representation template: %T", m.GetDataRepresentationTemplate())
@@ -239,20 +255,34 @@ func NewSimplePackingMessageReader(r io.ReaderAt, m IndexedMessage) (MessageRead
 		return nil, fmt.Errorf("get scanning mode: %w", err)
 	}
 
+	return NewSimplePackingMessageReader(r, m.GetOffset(), m.GetSize(), m.GetDataOffset(), sp, sm)
+}
+
+func NewSimplePackingMessageReader(r io.ReaderAt, messageOffset int64, messageSize int64, dataOffset int64, sp *gridpoint.SimplePacking, sm gdt.ScanningMode) (MessageReader, error) {
 	return &simplePackingMessageReader{
-		spr: gridpoint.NewSimplePackingReader(r, m.GetDataOffset(), m.GetSize()+m.GetOffset(), sp),
+		spr: gridpoint.NewSimplePackingReader(r, dataOffset, messageOffset+messageSize, sp),
 		sp:  sp,
 		sm:  sm,
 	}, nil
 }
 
-func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float64, error) {
+func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageIndex) (MessageReader, error) {
+	sp, ok := mi.Packing.(*gridpoint.SimplePacking)
+	if !ok {
+		return nil, fmt.Errorf("unsupported packing: %T", mi.Packing)
+	}
+
+	return NewSimplePackingMessageReader(r, mi.Offset, mi.Size, mi.DataOffset, sp, mi.ScanningMode)
+}
+
+func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float64, error) {
 	grid := r.sm.GetGridPointFromLL(lat, lon)
+	lat, lng := r.sm.GetGridPointLL(grid)
 
 	v, err := r.spr.ReadGridAt(grid)
 	if err != nil {
-		return 0, fmt.Errorf("read grid at point %d (lat: %f, lon: %f): %w", grid, lat, lon, err)
+		return 0, 0, 0, fmt.Errorf("read grid at point %d (lat: %f, lon: %f): %w", grid, lat, lng, err)
 	}
 
-	return v, nil
+	return lat, lng, v, nil
 }

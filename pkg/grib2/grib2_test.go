@@ -171,10 +171,11 @@ func TestGrib_ReadSectionAt_SimplePacking(t *testing.T) {
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 5, 21)
 				assertSection5(t, sec, &gridpoint.SimplePacking{
-					R:    0.0194875,
-					E:    -18,
-					D:    -4,
-					Bits: 12,
+					R:       0.0194875,
+					E:       -18,
+					D:       -4,
+					Bits:    12,
+					NumVals: 135399,
 				})
 			},
 		},
@@ -304,7 +305,7 @@ func TestGrib_ReadSectionAt_ComplexPacking(t *testing.T) {
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 5, 47)
 				assertSection5(t, sec, &gridpoint.ComplexPacking{
-					SimplePacking:              &gridpoint.SimplePacking{R: -2023.1235, E: 0, D: 2, Bits: 12},
+					SimplePacking:              &gridpoint.SimplePacking{R: -2023.1235, E: 0, D: 2, Bits: 12, NumVals: 65160},
 					GroupSplittingMethodUsed:   1,
 					MissingValueManagementUsed: 0,
 					PrimaryMissingSubstitute:   1649987994,
@@ -448,7 +449,7 @@ func TestGrib_ReadSectionAt_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 				assertSection(t, sec, 5, 49)
 				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
 					ComplexPacking: &gridpoint.ComplexPacking{
-						SimplePacking:              &gridpoint.SimplePacking{R: 772.85974, E: 3, D: 2, Bits: 17},
+						SimplePacking:              &gridpoint.SimplePacking{R: 772.85974, E: 3, D: 2, Bits: 17, NumVals: 1038240},
 						GroupSplittingMethodUsed:   1,
 						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,
@@ -597,7 +598,7 @@ func TestGrib_ReadSectionAt_tmax(t *testing.T) {
 				assertSection(t, sec, 5, 49)
 				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
 					ComplexPacking: &gridpoint.ComplexPacking{
-						SimplePacking:              &gridpoint.SimplePacking{R: 2125.6357, E: 0, D: 1, Bits: 9},
+						SimplePacking:              &gridpoint.SimplePacking{R: 2125.6357, E: 0, D: 1, Bits: 9, NumVals: 1038240},
 						GroupSplittingMethodUsed:   1,
 						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,
@@ -744,7 +745,7 @@ func TestGrib_ReadSectionAt_cwat(t *testing.T) {
 				assertSection(t, sec, 5, 49)
 				assertSection5(t, sec, &gridpoint.ComplexPackingAndSpatialDifferencing{
 					ComplexPacking: &gridpoint.ComplexPacking{
-						SimplePacking:              &gridpoint.SimplePacking{R: 0, E: 0, D: 2, Bits: 10},
+						SimplePacking:              &gridpoint.SimplePacking{R: 0, E: 0, D: 2, Bits: 10, NumVals: 1038240},
 						GroupSplittingMethodUsed:   1,
 						MissingValueManagementUsed: 0,
 						PrimaryMissingSubstitute:   1649987994,

@@ -19,7 +19,7 @@ type SimplePacking struct {
 	D       int16   // 18-19
 	Bits    uint8   // 20
 	Type    int8    // 21
-	numVals int     // 22
+	NumVals int
 }
 
 func NewSimplePacking(def definition.SimplePacking, numVals int) *SimplePacking {
@@ -29,7 +29,7 @@ func NewSimplePacking(def definition.SimplePacking, numVals int) *SimplePacking 
 		D:       regulation.ToInt16(def.D),
 		Bits:    def.Bits,
 		Type:    regulation.ToInt8(def.Type),
-		numVals: numVals,
+		NumVals: numVals,
 	}
 }
 
@@ -44,7 +44,7 @@ func (sp *SimplePacking) ReadAllData(r datapacking.BitReader) ([]float64, error)
 	)
 
 	if sp.Bits == 0 {
-		for range sp.numVals {
+		for range sp.NumVals {
 			values = append(values, scaleFunc(0))
 		}
 	}
@@ -62,11 +62,25 @@ func (sp *SimplePacking) ReadAllData(r datapacking.BitReader) ([]float64, error)
 		values = append(values, scaleFunc(uint32(bitsVal)))
 	}
 
-	if len(values) != sp.numVals {
-		return nil, fmt.Errorf("expected %d values, got %d", sp.numVals, len(values))
+	if len(values) != sp.NumVals {
+		return nil, fmt.Errorf("expected %d values, got %d", sp.NumVals, len(values))
 	}
 
 	return values, nil
+}
+
+func (sp *SimplePacking) GetNumVals() int {
+	return sp.NumVals
+}
+
+func (sp *SimplePacking) Definition() any {
+	return definition.SimplePacking{
+		R:    sp.R,
+		E:    regulation.ToUint16(sp.E),
+		D:    regulation.ToUint16(sp.D),
+		Bits: sp.Bits,
+		Type: regulation.ToUint8(sp.Type),
+	}
 }
 
 type SimplePackingReader struct {
@@ -88,8 +102,8 @@ func NewSimplePackingReader(r io.ReaderAt, start, end int64, sp *SimplePacking) 
 }
 
 func (r *SimplePackingReader) ReadGridAt(n int) (float64, error) {
-	if n >= r.sp.numVals {
-		return 0, fmt.Errorf("requesting[%d] is out of range, total number of values is %d", n, r.sp.numVals)
+	if n >= r.sp.NumVals {
+		return 0, fmt.Errorf("requesting[%d] is out of range, total number of values is %d", n, r.sp.NumVals)
 	}
 
 	bitsOffset := n * int(r.sp.Bits)
@@ -98,7 +112,7 @@ func (r *SimplePackingReader) ReadGridAt(n int) (float64, error) {
 
 	bs := make([]byte, needBytes)
 	if _, err := r.r.ReadAt(bs, r.offset+int64(bitsOffset/8)); err != nil {
-		return 0, fmt.Errorf("read at: %w, range: %d - %d", err, r.offset, r.offset+r.length)
+		return 0, fmt.Errorf("range %d - %d: %w", r.offset, r.offset+r.length, err)
 	}
 
 	br := bitio.NewReader(bytes.NewReader(bs))

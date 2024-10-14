@@ -1,6 +1,7 @@
 package gridpoint
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
@@ -47,6 +48,44 @@ func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r datapacking.BitR
 	}
 
 	return data, nil
+}
+
+type complexPackingAndSpatialDifferencing struct {
+	ComplexPacking         *ComplexPacking `json:"complex_packing"`
+	SpatialOrderDifference int8            `json:"spatial_order_difference"`
+	OctetsNumber           uint8           `json:"octets_number"`
+	NumVals                int             `json:"num_vals"`
+}
+
+func (cpsd *ComplexPackingAndSpatialDifferencing) MarshalJSON() ([]byte, error) {
+	return json.Marshal(complexPackingAndSpatialDifferencing{
+		ComplexPacking:         cpsd.ComplexPacking,
+		SpatialOrderDifference: cpsd.SpatialOrderDifference,
+		OctetsNumber:           cpsd.OctetsNumber,
+		NumVals:                cpsd.NumVals,
+	})
+}
+
+func (cpsd *ComplexPackingAndSpatialDifferencing) UnmarshalJSON(data []byte) error {
+	var temp complexPackingAndSpatialDifferencing
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	cpsd.ComplexPacking = temp.ComplexPacking
+	cpsd.SpatialOrderDifference = temp.SpatialOrderDifference
+	cpsd.OctetsNumber = temp.OctetsNumber
+	cpsd.NumVals = temp.NumVals
+	return nil
+}
+
+func (cpsd *ComplexPackingAndSpatialDifferencing) Definition() any {
+	return definition.ComplexPackingAndSpatialDifferencing{
+		ComplexPacking:         cpsd.ComplexPacking.Definition().(definition.ComplexPacking),
+		SpatialOrderDifference: regulation.ToUint8(cpsd.SpatialOrderDifference),
+		OctetsNumber:           cpsd.OctetsNumber,
+	}
 }
 
 type spacingDifferential struct {
