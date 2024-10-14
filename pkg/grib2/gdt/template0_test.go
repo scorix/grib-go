@@ -53,6 +53,8 @@ func TestGetGridPointLL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%.2f,%.2f", tt.lat, tt.lon), func(t *testing.T) {
+			t.Parallel()
+
 			template := gdt.Template0{
 				Template0FixedPart: tt.tpl,
 			}

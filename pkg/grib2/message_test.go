@@ -9,6 +9,7 @@ import (
 	cio "github.com/scorix/go-eccodes/io"
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
+	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/mmap"
@@ -26,6 +27,8 @@ func TestMessageReader_ReadLL(t *testing.T) {
 	}
 
 	t.Run(s.Name(), func(t *testing.T) {
+		t.Parallel()
+
 		f, err := os.Open(filename)
 		require.NoError(t, err)
 		defer f.Close()
@@ -63,7 +66,10 @@ func TestMessageReader_ReadLL(t *testing.T) {
 		mm, err := mmap.Open(f.Name())
 		require.NoError(t, err)
 
-		reader, err := grib2.NewSimplePackingMessageReader(mm, msg)
+		sm, err := msg.GetScanningMode()
+		require.NoError(t, err)
+
+		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetDataOffset(), msg.GetSize()+msg.GetOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), sm)
 		require.NoError(t, err)
 
 		for i := 0; iter.HasNext(); i++ {
@@ -76,14 +82,14 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
 			{
-				v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 
 			{
 				// read again
-				v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
