@@ -29,7 +29,7 @@ func TestTemplateMarshaler_MarshalJSON(t *testing.T) {
 					NumVals: 721 * 1440,
 				},
 			},
-			want: `{"template_number":0,"content":"3fc00000000200031000","num_vals":1038240}`,
+			want: `{"number":0,"content":"3fc00000000200031000","vals":1038240}`,
 		},
 	}
 
@@ -59,7 +59,7 @@ func TestTemplateMarshaler_UnmarshalJSON(t *testing.T) {
 	}{
 		{
 			name: "simple packing",
-			json: `{"template_number":0,"content":"3fc00000000200031000","num_vals":1038240}`,
+			json: `{"number":0,"content":"3fc00000000200031000","vals":1038240}`,
 			want: &gridpoint.SimplePacking{
 				R:       1.5,
 				E:       2,
