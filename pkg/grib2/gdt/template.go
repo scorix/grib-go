@@ -1,9 +1,7 @@
 package gdt
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -47,19 +45,19 @@ type ScanningModeMarshaler struct {
 }
 
 type scanningModeMarshaler struct {
-	Mode    int8   `json:"mode"`
-	Content string `json:"content"`
+	Mode    int8            `json:"mode"`
+	Content json.RawMessage `json:"content"`
 }
 
 func (sm ScanningModeMarshaler) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, sm.Template); err != nil {
+	content, err := json.Marshal(sm.Template)
+	if err != nil {
 		return nil, err
 	}
 
 	m := scanningModeMarshaler{
 		Mode:    sm.Template.GetScanMode(),
-		Content: hex.EncodeToString(buf.Bytes()),
+		Content: content,
 	}
 
 	return json.Marshal(m)
@@ -75,12 +73,7 @@ func (sm *ScanningModeMarshaler) UnmarshalJSON(data []byte) error {
 	switch m.Mode {
 	case 0:
 		var mode ScanningMode0000
-		decoded, err := hex.DecodeString(m.Content)
-		if err != nil {
-			return err
-		}
-
-		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &mode); err != nil {
+		if err := json.Unmarshal(m.Content, &mode); err != nil {
 			return err
 		}
 

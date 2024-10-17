@@ -32,13 +32,13 @@ func TestMessageIndex_MarshalJSON(t *testing.T) {
 					Nj: 20,
 				}),
 				Packing: drt.Template(&gridpoint.SimplePacking{
-					R:    1.5,
-					E:    2,
-					D:    3,
-					Bits: 16,
+					ReferenceValue:     1.5,
+					BinaryScaleFactor:  2,
+					DecimalScaleFactor: 3,
+					Bits:               16,
 				}),
 			},
-			want: `{"offset":100,"size":1000,"data_offset":200,"scanning_mode":{"content":"0000000a0000001400000000000000000000000000000000000000000000000000", "scan_mode":0},"packing":{"content":"3fc00000000200031000", "number":0, "vals":0}}`,
+			want: `{"offset":100,"size":1000,"data_offset":200,"scanning_mode":{"mode":0,"content":{"ni":10,"nj":20,"latitudeOfFirstGridPoint":0,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":0,"latitudeOfLastGridPoint":0,"longitudeOfLastGridPoint":0,"iDirectionIncrement":0,"jDirectionIncrement":0}},"packing":{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":0}}`,
 		},
 	}
 
@@ -52,7 +52,7 @@ func TestMessageIndex_MarshalJSON(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.JSONEq(t, tt.want, string(got))
+				assert.JSONEq(t, tt.want, string(got), string(got))
 			}
 		})
 	}
@@ -69,7 +69,7 @@ func TestMessageIndex_UnmarshalJSON(t *testing.T) {
 	}{
 		{
 			name: "unmarshal simple packing",
-			json: `{"offset":100,"size":1000,"data_offset":200,"scanning_mode":{"content":"0000000a0000001400000000000000000000000000000000000000000000000000", "scan_mode":0},"packing":{"content":"3fc00000000200031000", "number":0, "vals":0}}`,
+			json: `{"offset":100,"size":1000,"data_offset":200,"scanning_mode":{"mode":0,"content":{"ni":10,"nj":20,"latitudeOfFirstGridPoint":0,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":0,"latitudeOfLastGridPoint":0,"longitudeOfLastGridPoint":0,"iDirectionIncrement":0,"jDirectionIncrement":0}},"packing":{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":0}}`,
 			want: grib2.MessageIndex{
 				Offset:     100,
 				Size:       1000,
@@ -79,10 +79,10 @@ func TestMessageIndex_UnmarshalJSON(t *testing.T) {
 					Nj: 20,
 				}),
 				Packing: drt.Template(&gridpoint.SimplePacking{
-					R:    1.5,
-					E:    2,
-					D:    3,
-					Bits: 16,
+					ReferenceValue:     1.5,
+					BinaryScaleFactor:  2,
+					DecimalScaleFactor: 3,
+					Bits:               16,
 				}),
 			},
 		},

@@ -31,7 +31,7 @@ func TestScanningModeJSON(t *testing.T) {
 					JDirectionIncrement:         1000000,
 				},
 			},
-			want:    `{"mode":0,"content":"00000168000000b5055d4a800000000030faa2b5801565e7c0000f4240000f4240"}`,
+			want:    `{"mode":0,"content":{"ni":360,"nj":181,"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":48,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359000000,"iDirectionIncrement":1000000,"jDirectionIncrement":1000000}}`,
 			wantErr: false,
 		},
 	}
@@ -58,7 +58,7 @@ func TestScanningMode0000_UnmarshalJSON(t *testing.T) {
 	}{
 		{
 			name:  "unmarshal scanning mode 0000",
-			input: `{"mode":0,"content":"00000168000000b5055d4a800000000030faa2b5801565e7c0000f4240000f4240"}`,
+			input: `{"mode":0,"content":{"ni":360,"nj":181,"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":48,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359000000,"iDirectionIncrement":1000000,"jDirectionIncrement":1000000}}`,
 			want: gdt.ScanningModeMarshaler{
 				Template: &gdt.ScanningMode0000{
 					Ni:                          360,

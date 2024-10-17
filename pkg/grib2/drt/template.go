@@ -1,9 +1,7 @@
 package drt
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -84,15 +82,14 @@ type TemplateMarshaler struct {
 }
 
 type templateMarshaler struct {
-	Number  TemplateNumber `json:"number"`
-	Content string         `json:"content"`
-	Vals    int            `json:"vals"`
+	Number  TemplateNumber  `json:"number"`
+	Content json.RawMessage `json:"content"`
+	Vals    int             `json:"vals"`
 }
 
 func (tm TemplateMarshaler) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-
-	if err := binary.Write(&buf, binary.BigEndian, tm.Template.Definition()); err != nil {
+	content, err := json.Marshal(tm.Template.Definition())
+	if err != nil {
 		return nil, err
 	}
 
@@ -108,7 +105,7 @@ func (tm TemplateMarshaler) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(templateMarshaler{
 		Number:  tplNum,
-		Content: hex.EncodeToString(buf.Bytes()),
+		Content: content,
 		Vals:    tm.Template.GetNumVals(),
 	})
 }
@@ -120,16 +117,11 @@ func (tm *TemplateMarshaler) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	decoded, err := hex.DecodeString(t.Content)
-	if err != nil {
-		return err
-	}
-
 	switch t.Number {
 	case GridPointDataSimplePacking:
 		var tplDef definition.SimplePacking
 
-		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &tplDef); err != nil {
+		if err := json.Unmarshal(t.Content, &tplDef); err != nil {
 			return err
 		}
 
@@ -139,7 +131,7 @@ func (tm *TemplateMarshaler) UnmarshalJSON(data []byte) error {
 	case GridPointDataComplexPacking:
 		var tplDef definition.ComplexPacking
 
-		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &tplDef); err != nil {
+		if err := json.Unmarshal(t.Content, &tplDef); err != nil {
 			return err
 		}
 
@@ -149,7 +141,7 @@ func (tm *TemplateMarshaler) UnmarshalJSON(data []byte) error {
 	case GridPointDataComplexPackingAndSpatialDifferencing:
 		var tplDef definition.ComplexPackingAndSpatialDifferencing
 
-		if err := binary.Read(bytes.NewBuffer(decoded), binary.BigEndian, &tplDef); err != nil {
+		if err := json.Unmarshal(t.Content, &tplDef); err != nil {
 			return err
 		}
 
