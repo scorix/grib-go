@@ -33,3 +33,15 @@ type ComplexPackingAndSpatialDifferencing struct {
 	SpatialOrderDifference uint8 `json:"spatialOrderDifference"`
 	OctetsNumber           uint8 `json:"octetsNumber"`
 }
+
+/*
+Section 5 - Template 41 : Grid point data - Portable Network Graphics (PNG) format
+
+Octets	Key	Type	Content
+12-15	referenceValue	ieeefloat	Reference value (R) (IEEE 32-bit floating-point value)
+16-17	binaryScaleFactor	signed	Binary scale factor (E)
+18-19	decimalScaleFactor	signed	Decimal scale factor (D)
+20	bitsPerValue	unsigned	Number of bits required to hold the resulting scaled and referenced data values. (i.e. The depth of the image.) (see Note 2)
+21	typeOfOriginalFieldValues	codetable	Type of original field values (see Code Table 5.1)
+*/
+type PNG SimplePacking

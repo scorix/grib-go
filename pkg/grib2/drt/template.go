@@ -71,6 +71,14 @@ func ReadTemplate(r datapacking.BitReader, n TemplateNumber, numVals int) (Templ
 
 		return gridpoint.NewComplexPackingAndSpatialDifferencing(tplDef, numVals), nil
 
+	case GridPointDataPNG:
+		var tplDef definition.PNG
+
+		if err := binary.Read(r, binary.BigEndian, &tplDef); err != nil {
+			return nil, err
+		}
+
+		return gridpoint.NewPortableNetworkGraphics(tplDef, numVals), nil
 	}
 
 	return nil, fmt.Errorf("data template not implemented: %d", n)
@@ -101,6 +109,8 @@ func (tm TemplateMarshaler) MarshalJSON() ([]byte, error) {
 		tplNum = GridPointDataComplexPacking
 	case *gridpoint.ComplexPackingAndSpatialDifferencing:
 		tplNum = GridPointDataComplexPackingAndSpatialDifferencing
+	case *gridpoint.PortableNetworkGraphics:
+		tplNum = GridPointDataPNG
 	}
 
 	return json.Marshal(templateMarshaler{
@@ -146,6 +156,16 @@ func (tm *TemplateMarshaler) UnmarshalJSON(data []byte) error {
 		}
 
 		tm.Template = gridpoint.NewComplexPackingAndSpatialDifferencing(tplDef, t.Vals)
+		return nil
+
+	case GridPointDataPNG:
+		var tplDef definition.PNG
+
+		if err := json.Unmarshal(t.Content, &tplDef); err != nil {
+			return err
+		}
+
+		tm.Template = gridpoint.NewPortableNetworkGraphics(tplDef, t.Vals)
 		return nil
 	}
 

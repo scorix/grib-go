@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/icza/bitio"
 	ossio "github.com/scorix/aliyun-oss-io"
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
@@ -480,6 +481,144 @@ func TestGrib_ReadSectionAt_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 			test: func(t *testing.T, sec grib2.Section) {
 				assertSection(t, sec, 7, 1476779)
 				assertSection7(t, sec, 203)
+			},
+		},
+		{
+			name: "section 8",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 8, 4)
+			},
+		},
+		{
+			name: "eof",
+			test: func(t *testing.T, sec grib2.Section) {
+				assert.Nil(t, sec)
+			},
+			err: io.EOF,
+		},
+	}
+
+	var offset int64
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t2 *testing.T) {
+			sec, err := g.ReadSectionAt(offset)
+			if tt.err == nil {
+				require.NoError(t, err)
+				offset += int64(sec.Length())
+			} else {
+				assert.ErrorIs(t, err, tt.err)
+			}
+
+			tt.test(t2, sec)
+		})
+	}
+}
+
+func TestGrib_ReadSectionAt_PNG(t *testing.T) {
+	t.Parallel()
+
+	f, err := os.Open("../testdata/grid_png.grib2")
+	require.NoError(t, err)
+	defer f.Close()
+
+	g := grib.NewGrib2(f)
+
+	tests := []struct {
+		name string
+		test func(t *testing.T, sec grib2.Section)
+		err  error
+	}{
+		{
+			name: "section 0",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 0, 16)
+				assertSection0(t, sec, 2, 0, 78374)
+			},
+		},
+		{
+			name: "section 1",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 1, 21)
+				assertSection1(t, sec, "2019-01-06T12:00:00Z")
+			},
+		},
+		{
+			name: "section 3",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 3, 72)
+				assertSection3(t, sec, &gdt.Template0{
+					Template0FixedPart: gdt.Template0FixedPart{
+						ShapeOfTheEarth:                        6,
+						ScaleFactorOfRadiusOfSphericalEarth:    0,
+						ScaledValueOfRadiusOfSphericalEarth:    0,
+						ScaleFactorOfEarthMajorAxis:            0,
+						ScaledValueOfEarthMajorAxis:            0,
+						ScaleFactorOfEarthMinorAxis:            0,
+						ScaledValueOfEarthMinorAxis:            0,
+						Ni:                                     360,
+						Nj:                                     181,
+						BasicAngleOfTheInitialProductionDomain: 0,
+						SubdivisionsOfBasicAngle:               -1,
+						LatitudeOfFirstGridPoint:               90000000,
+						LongitudeOfFirstGridPoint:              0,
+						ResolutionAndComponentFlags:            48,
+						LatitudeOfLastGridPoint:                -90000000,
+						LongitudeOfLastGridPoint:               359000000,
+						IDirectionIncrement:                    1000000,
+						JDirectionIncrement:                    1000000,
+						ScanningMode:                           0,
+					},
+				})
+			},
+		},
+		{
+			name: "section 4",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 4, 34)
+				assertSection4(t, sec, &pdt.Template0{
+					ParameterCategory:       2,
+					ParameterNumber:         2,
+					TypeOfGeneratingProcess: 2,
+					BackgroundProcess:       0,
+					AnalysisOrForecastGeneratingProcessIdentified: 96,
+					HoursAfterDataCutoff:                          0,
+					MinutesAfterDataCutoff:                        0,
+					IndicatorOfUnitForForecastTime:                1,
+					ForecastTime:                                  6,
+					TypeOfFirstFixedSurface:                       103,
+					ScaleFactorOfFirstFixedSurface:                0,
+					ScaledValueOfFirstFixedSurface:                10,
+					TypeOfSecondFixedSurface:                      255,
+					ScaleFactorOfSecondFixedSurface:               0,
+					ScaledValueOfSecondFixedSurface:               0,
+				})
+			},
+		},
+		{
+			name: "section 5",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 5, 21)
+				assertSection5(t, sec, &gridpoint.PortableNetworkGraphics{
+					ReferenceValue:     -2023.1235,
+					BinaryScaleFactor:  1,
+					DecimalScaleFactor: 2,
+					Bits:               12,
+					NumVals:            65160,
+				})
+			},
+		},
+		{
+			name: "section 6",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 6, 6)
+			},
+		},
+		{
+			name: "section 7",
+			test: func(t *testing.T, sec grib2.Section) {
+				assertSection(t, sec, 7, 78200)
+				assertSection7(t, sec, 175)
 			},
 		},
 		{
@@ -991,6 +1130,73 @@ func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 	}
 }
 
+func TestSection7_ReadData_PortableNetworkGraphics(t *testing.T) {
+	t.Parallel()
+
+	f, err := os.Open("../testdata/grid_png.grib2")
+	require.NoError(t, err)
+	defer f.Close()
+
+	g := grib.NewGrib2(f)
+
+	var sec7 grib2.Section7
+	var tpl drt.Template
+	var dataLen int
+
+	var offset int64
+
+	for {
+		sec, err := g.ReadSectionAt(offset)
+		require.NoError(t, err)
+
+		offset += int64(sec.Length())
+
+		if sec.Number() == 5 {
+			tpl = sec.(grib2.Section5).GetDataRepresentationTemplate()
+			dataLen = sec.(grib2.Section5).GetNumberOfValues()
+			require.Equal(t, 65160, dataLen)
+		}
+
+		if sec.Number() == 7 {
+			sec7 = sec.(grib2.Section7)
+
+			break
+		}
+	}
+
+	data, err := sec7.GetData(tpl)
+	require.NoError(t, err)
+	require.Equal(t, dataLen, len(data))
+
+	// grib_dump -O pkg/testdata/hpbl.grib2
+	exampleValues := []float64{
+		1.18876, 1.16876, 1.14876, 1.12876, 1.10876,
+		1.06876, 1.04876, 1.02876, 1.00876, 0.968765,
+		0.948765, 0.928765, 0.908765, 0.868765, 0.848765,
+		0.828765, 0.788765, 0.768765, 0.748765, 0.708765,
+		0.688765, 0.648765, 0.628765, 0.588765, 0.568765,
+		0.548765, 0.508765, 0.488765, 0.448765, 0.428765,
+		0.388765, 0.368765, 0.328765, 0.308765, 0.268765,
+		0.248765, 0.208765, 0.188765, 0.148765, 0.128765,
+		0.0887646, 0.0687646, 0.0287646, 0.00876465, -0.0312354,
+		-0.0712354, -0.0912354, -0.131235, -0.151235, -0.191235,
+		-0.211235, -0.251235, -0.271235, -0.311235, -0.331235,
+		-0.371235, -0.391235, -0.431235, -0.451235, -0.491235,
+		-0.511235, -0.551235, -0.571235, -0.591235, -0.631235,
+		-0.651235, -0.691235, -0.711235, -0.731235, -0.771235,
+		-0.791235, -0.831235, -0.851235, -0.871235, -0.911235,
+		-0.931235, -0.951235, -0.971235, -1.01124, -1.03124,
+		-1.05124, -1.07124, -1.09124, -1.13124, -1.15124,
+		-1.17124, -1.19124, -1.21124, -1.23124, -1.25124,
+		-1.27124, -1.29124, -1.31124, -1.33124, -1.35124,
+		-1.37124, -1.39124, -1.41124, -1.43124, -1.45124,
+	}
+
+	for i, v := range exampleValues {
+		assert.InDelta(t, v, data[i], 1e-5)
+	}
+}
+
 func TestGrib2_ReadMessages(t *testing.T) {
 	t.Parallel()
 	// aws s3 cp --no-sign-request s3://noaa-gfs-bdp-pds/gfs.20240820/12/atmos/gfs.t12z.pgrb2.0p25.f044 pkg/testdata/gfs.t12z.pgrb2.0p25.f044
@@ -1253,7 +1459,9 @@ func TestGrib2_ReadMessageAt(t *testing.T) {
 		require.NoError(t, err)
 
 		r, err := ossio.NewReader(ctx, bucket, key)
-		require.NoError(t, err)
+		if err != nil {
+			t.Skip(err.Error())
+		}
 
 		p := make([]byte, 16)
 		n, err := r.ReadAt(p, msgOffset)
@@ -1444,7 +1652,9 @@ func TestGrib2_EachMessage(t *testing.T) {
 		require.NoError(t, err)
 
 		r, err := ossio.NewReader(ctx, bucket, key)
-		require.NoError(t, err)
+		if err != nil {
+			t.Skip(err.Error())
+		}
 
 		g := grib.NewGrib2(r)
 
@@ -1456,4 +1666,47 @@ func TestGrib2_EachMessage(t *testing.T) {
 		}))
 		assert.Equal(t, 209, count)
 	})
+}
+
+func TestGrib2_ReadImage(t *testing.T) {
+	t.Parallel()
+
+	const filename = "../testdata/grid_png.grib2"
+
+	p := &gridpoint.PortableNetworkGraphics{
+		ReferenceValue:     -2023.1235,
+		BinaryScaleFactor:  1,
+		DecimalScaleFactor: 2,
+		Bits:               12,
+		NumVals:            65160,
+	}
+
+	t.Run("read all data", func(t *testing.T) {
+		f, err := os.Open(filename)
+		if errors.Is(err, os.ErrNotExist) {
+			t.Skipf("%s not exist", filename)
+		}
+		defer f.Close()
+
+		r := io.NewSectionReader(f, 175, 78200)
+
+		vals, err := p.ReadAllData(bitio.NewReader(r))
+		require.NoError(t, err)
+		require.Equal(t, 65160, len(vals))
+		assert.Equal(t, 1.1887646484375018, vals[0])
+	})
+
+	// t.Run("read grid image", func(t *testing.T) {
+	// 	f, err := os.Open(filename)
+	// 	if errors.Is(err, os.ErrNotExist) {
+	// 		t.Skipf("%s not exist", filename)
+	// 	}
+	// 	defer f.Close()
+
+	// 	pr := gridpoint.NewPortableNetworkGraphicsReader(f, 175, 78200, p)
+
+	// 	img, err := pr.ImageGridAt(0)
+	// 	require.NoError(t, err)
+	// 	require.NotNil(t, img)
+	// })
 }
