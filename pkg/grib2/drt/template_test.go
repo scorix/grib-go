@@ -22,14 +22,14 @@ func TestTemplateMarshaler_MarshalJSON(t *testing.T) {
 			name: "simple packing",
 			fields: drt.TemplateMarshaler{
 				Template: &gridpoint.SimplePacking{
-					R:       1.5,
-					E:       2,
-					D:       3,
-					Bits:    16,
-					NumVals: 721 * 1440,
+					ReferenceValue:     1.5,
+					BinaryScaleFactor:  2,
+					DecimalScaleFactor: 3,
+					Bits:               16,
+					NumVals:            721 * 1440,
 				},
 			},
-			want: `{"number":0,"content":"3fc00000000200031000","vals":1038240}`,
+			want: `{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":1038240}`,
 		},
 	}
 
@@ -42,7 +42,7 @@ func TestTemplateMarshaler_MarshalJSON(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.JSONEq(t, tt.want, string(got))
+				assert.JSONEq(t, tt.want, string(got), string(got))
 			}
 		})
 	}
@@ -59,13 +59,13 @@ func TestTemplateMarshaler_UnmarshalJSON(t *testing.T) {
 	}{
 		{
 			name: "simple packing",
-			json: `{"number":0,"content":"3fc00000000200031000","vals":1038240}`,
+			json: `{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":1038240}`,
 			want: &gridpoint.SimplePacking{
-				R:       1.5,
-				E:       2,
-				D:       3,
-				Bits:    16,
-				NumVals: 1038240,
+				ReferenceValue:     1.5,
+				BinaryScaleFactor:  2,
+				DecimalScaleFactor: 3,
+				Bits:               16,
+				NumVals:            1038240,
 			},
 		},
 	}

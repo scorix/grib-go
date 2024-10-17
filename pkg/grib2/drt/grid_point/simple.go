@@ -14,27 +14,27 @@ import (
 )
 
 type SimplePacking struct {
-	R       float32 // 12-15
-	E       int16   // 16-17
-	D       int16   // 18-19
-	Bits    uint8   // 20
-	Type    int8    // 21
-	NumVals int
+	ReferenceValue     float32 // 12-15
+	BinaryScaleFactor  int16   // 16-17
+	DecimalScaleFactor int16   // 18-19
+	Bits               uint8   // 20
+	Type               int8    // 21
+	NumVals            int
 }
 
 func NewSimplePacking(def definition.SimplePacking, numVals int) *SimplePacking {
 	return &SimplePacking{
-		R:       def.R,
-		E:       regulation.ToInt16(def.E),
-		D:       regulation.ToInt16(def.D),
-		Bits:    def.Bits,
-		Type:    regulation.ToInt8(def.Type),
-		NumVals: numVals,
+		ReferenceValue:     def.R,
+		BinaryScaleFactor:  regulation.ToInt16(def.B),
+		DecimalScaleFactor: regulation.ToInt16(def.D),
+		Bits:               def.L,
+		Type:               regulation.ToInt8(def.T),
+		NumVals:            numVals,
 	}
 }
 
 func (sp *SimplePacking) ScaleFunc() func(uint32) float64 {
-	return datapacking.SimpleScaleFunc(sp.E, sp.D, sp.R)
+	return datapacking.SimpleScaleFunc(sp.BinaryScaleFactor, sp.DecimalScaleFactor, sp.ReferenceValue)
 }
 
 func (sp *SimplePacking) ReadAllData(r datapacking.BitReader) ([]float64, error) {
@@ -75,11 +75,11 @@ func (sp *SimplePacking) GetNumVals() int {
 
 func (sp *SimplePacking) Definition() any {
 	return definition.SimplePacking{
-		R:    sp.R,
-		E:    regulation.ToUint16(sp.E),
-		D:    regulation.ToUint16(sp.D),
-		Bits: sp.Bits,
-		Type: regulation.ToUint8(sp.Type),
+		R: sp.ReferenceValue,
+		B: regulation.ToUint16(sp.BinaryScaleFactor),
+		D: regulation.ToUint16(sp.DecimalScaleFactor),
+		L: sp.Bits,
+		T: regulation.ToUint8(sp.Type),
 	}
 }
 

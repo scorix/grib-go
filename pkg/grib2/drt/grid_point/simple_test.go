@@ -19,9 +19,9 @@ func TestSimpleScale(t *testing.T) {
 	assert.Equal(t, float64(1.3113e-320), math.Float64frombits(uint64(v)))
 
 	sp := gridpoint.NewSimplePacking(definition.SimplePacking{}, 1)
-	sp.R = 0.0194875
-	sp.E = -18
-	sp.D = -4
+	sp.ReferenceValue = 0.0194875
+	sp.BinaryScaleFactor = -18
+	sp.DecimalScaleFactor = -4
 	sp.Bits = 12
 	t.Logf("simple packing: %+v", sp)
 
@@ -37,9 +37,9 @@ func TestSimpleScaleReader(t *testing.T) {
 	bf := bytes.NewReader(bs)
 
 	sp := gridpoint.NewSimplePacking(definition.SimplePacking{}, 3)
-	sp.R = 0.0194875
-	sp.E = -18
-	sp.D = -4
+	sp.ReferenceValue = 0.0194875
+	sp.BinaryScaleFactor = -18
+	sp.DecimalScaleFactor = -4
 	sp.Bits = 12
 	t.Logf("simple packing: %+v", sp)
 

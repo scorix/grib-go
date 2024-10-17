@@ -132,15 +132,15 @@ func (t *Template0FixedPart) GetNj() int32 {
 }
 
 type ScanningMode0000 struct {
-	Ni                          int32
-	Nj                          int32
-	LatitudeOfFirstGridPoint    int32
-	LongitudeOfFirstGridPoint   int32
-	ResolutionAndComponentFlags int8
-	LatitudeOfLastGridPoint     int32
-	LongitudeOfLastGridPoint    int32
-	IDirectionIncrement         int32
-	JDirectionIncrement         int32
+	Ni                          int32 `json:"ni"`
+	Nj                          int32 `json:"nj"`
+	LatitudeOfFirstGridPoint    int32 `json:"latitudeOfFirstGridPoint"`
+	LongitudeOfFirstGridPoint   int32 `json:"longitudeOfFirstGridPoint"`
+	ResolutionAndComponentFlags int8  `json:"resolutionAndComponentFlags"`
+	LatitudeOfLastGridPoint     int32 `json:"latitudeOfLastGridPoint"`
+	LongitudeOfLastGridPoint    int32 `json:"longitudeOfLastGridPoint"`
+	IDirectionIncrement         int32 `json:"iDirectionIncrement"`
+	JDirectionIncrement         int32 `json:"jDirectionIncrement"`
 }
 
 func (sm *ScanningMode0000) GetLatitudeGridPoint(n int) int {
