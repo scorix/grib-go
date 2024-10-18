@@ -3,6 +3,7 @@ package grib2
 import (
 	"bytes"
 	"fmt"
+	"image"
 	"io"
 	"time"
 
@@ -22,6 +23,7 @@ type Message interface {
 	GetScanningMode() (gdt.ScanningMode, error)
 
 	ReadData() ([]float64, error)
+	Image() (image.Image, error)
 	Step() int
 
 	GetGridPointLL(n int) (float32, float32, error)
@@ -232,6 +234,20 @@ func (m *message) DumpMessageIndex() (*MessageIndex, error) {
 		ScanningMode: sm,
 		Packing:      m.GetDataRepresentationTemplate(),
 	}, nil
+}
+
+func (m *message) Image() (image.Image, error) {
+	tpl := m.GetDataRepresentationTemplate()
+
+	switch t := tpl.(type) {
+	case *gridpoint.PortableNetworkGraphics:
+		if err := m.sec7.LoadData(); err != nil {
+			return nil, fmt.Errorf("load data from section 7: %w", err)
+		}
+		return t.Image(bitio.NewReader(bytes.NewReader(m.sec7.Data)))
+	default:
+		return nil, fmt.Errorf("data is not an image: %T", tpl)
+	}
 }
 
 type MessageReader interface {

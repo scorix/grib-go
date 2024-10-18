@@ -2,6 +2,7 @@ package gridpoint
 
 import (
 	"fmt"
+	"image"
 	"image/png"
 	"io"
 
@@ -76,8 +77,8 @@ func (p *PortableNetworkGraphics) ReadAllData(r datapacking.BitReader) ([]float6
 			if i >= p.NumVals {
 				break
 			}
-			r, _, _, _ := img.At(x, y).RGBA()
-			values[i] = scaleFunc(uint32(r))
+			r, g, b, a := img.At(x, y).RGBA()
+			values[i] = scaleFunc(p.rgbaToUint32(r, g, b, a))
 			i++
 		}
 	}
@@ -87,6 +88,31 @@ func (p *PortableNetworkGraphics) ReadAllData(r datapacking.BitReader) ([]float6
 	}
 
 	return values, nil
+}
+
+func (p *PortableNetworkGraphics) rgbaToUint32(r, g, b, a uint32) uint32 {
+	switch p.Bits {
+	case 1, 2, 4, 8, 16:
+		// 1, 2, 4, 8, or 16 - treat as a grayscale image
+		return r
+	case 24:
+		// 24 - treat as RGB color image (each component having 8 bit depth)
+		return r<<16 | g<<8 | b
+	case 32:
+		// 32 - treat as RGB w/alpha sample color image (each component having 8 bit depth)
+		return r<<24 | g<<16 | b<<8 | a
+	}
+
+	return r
+}
+
+func (p *PortableNetworkGraphics) Image(r datapacking.BitReader) (image.Image, error) {
+	img, err := png.Decode(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode PNG: %w", err)
+	}
+
+	return img, nil
 }
 
 type PortableNetworkGraphicsReader struct {
