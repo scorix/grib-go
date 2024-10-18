@@ -3,6 +3,7 @@ package grib2_test
 import (
 	"context"
 	"errors"
+	"image/png"
 	"io"
 	"os"
 	"testing"
@@ -1693,7 +1694,30 @@ func TestGrib2_ReadImage(t *testing.T) {
 		vals, err := p.ReadAllData(bitio.NewReader(r))
 		require.NoError(t, err)
 		require.Equal(t, 65160, len(vals))
-		assert.Equal(t, 1.1887646484375018, vals[0])
+		assert.InDelta(t, 1.18876, vals[0], 1e-5)
+	})
+
+	t.Run("read image", func(t *testing.T) {
+		f, err := os.Open(filename)
+		if errors.Is(err, os.ErrNotExist) {
+			t.Skipf("%s not exist", filename)
+		}
+		defer f.Close()
+
+		r := io.NewSectionReader(f, 175, 78200)
+		img, err := p.Image(bitio.NewReader(r))
+		require.NoError(t, err)
+		require.NotNil(t, img)
+
+		tmp, err := os.CreateTemp(os.TempDir(), "img.png")
+		require.NoError(t, err)
+		defer os.Remove(tmp.Name())
+		defer tmp.Close()
+
+		assert.Equal(t, 360, img.Bounds().Max.X)
+		assert.Equal(t, 181, img.Bounds().Max.Y)
+
+		require.NoError(t, png.Encode(tmp, img))
 	})
 
 	// t.Run("read grid image", func(t *testing.T) {

@@ -5,3 +5,4 @@ pkg/testdata/**/gfs.*
 
 *.out
 .env
+tmp/

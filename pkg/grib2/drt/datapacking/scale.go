@@ -14,7 +14,7 @@ func DecimalScaleFactor(d int16) float64 {
 
 // The original data value Y (in the units of code table 4.2) can be recovered with the formula:
 //
-// Y * 10D= R + (X1+X2) * 2E
+// Y * 10^D = R + (X1+X2) * 2^E
 //
 // For simple packing and all spectral data
 // E = Binary scale factor,
