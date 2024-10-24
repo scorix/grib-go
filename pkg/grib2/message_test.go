@@ -2,25 +2,18 @@ package grib2_test
 
 import (
 	"errors"
-	"fmt"
-	"image"
-	"image/color"
-	"image/png"
 	"os"
 	"testing"
 
 	codes "github.com/scorix/go-eccodes"
 	cio "github.com/scorix/go-eccodes/io"
-	"github.com/scorix/grib-go/pkg/colormap"
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 	"github.com/scorix/grib-go/pkg/grib2/gdt"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/mmap"
-	"golang.org/x/sync/errgroup"
 )
 
 func TestMessageReader_ReadLL(t *testing.T) {
@@ -172,148 +165,4 @@ func TestMessage_DumpMessageIndex(t *testing.T) {
 			require.EqualExportedValues(t, tt.want, got)
 		})
 	}
-}
-
-func TestMessage_Image(t *testing.T) {
-	t.Parallel()
-
-	const (
-		f1 = "/Users/scorix/Downloads/2t_heightAboveGround_2_0_0.grib2"
-		f2 = "/Users/scorix/Downloads/2t_heightAboveGround_2_0_0.png.grib2"
-	)
-
-	mm1, err := mmap.Open(f1)
-	if err != nil {
-		t.Skipf("skip %s: %v", f1, err)
-	}
-
-	mm2, err := mmap.Open(f2)
-	if err != nil {
-		t.Skipf("skip %s: %v", f2, err)
-	}
-
-	g1 := grib.NewGrib2(mm1)
-	g2 := grib.NewGrib2(mm2)
-
-	t.Run("compare data", func(t *testing.T) {
-		t.Parallel()
-
-		msg1, err := g1.ReadMessageAt(0)
-		require.NoError(t, err)
-
-		msg2, err := g2.ReadMessageAt(0)
-		require.NoError(t, err)
-
-		data1, err := msg1.ReadData()
-		require.NoError(t, err)
-
-		data2, err := msg2.ReadData()
-		require.NoError(t, err)
-
-		assert.Equal(t, data1, data2)
-	})
-
-	t.Run("export image from grid_png", func(t *testing.T) {
-		t.Parallel()
-
-		var i int
-		var eg errgroup.Group
-
-		_ = g2.EachMessage(func(msg grib.IndexedMessage) (next bool, err error) {
-			require.IsType(t, &gridpoint.PortableNetworkGraphics{}, msg.GetDataRepresentationTemplate())
-			filename := fmt.Sprintf("../../tmp/2t_heightAboveGround_2_0_0.%d.png", i)
-
-			eg.Go(func() error {
-				img, err := msg.Image()
-				if err != nil {
-					return err
-				}
-
-				bounds := img.Bounds()
-
-				var max, min uint32
-				for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-					for x := bounds.Min.X; x < bounds.Max.X; x++ {
-						r, _, _, _ := img.At(x, y).RGBA()
-						if r > max {
-							max = r
-						}
-						if r < min {
-							min = r
-						}
-					}
-				}
-
-				rgbaImg := image.NewRGBA(bounds)
-				for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-					for x := bounds.Min.X; x < bounds.Max.X; x++ {
-						r, _, _, _ := img.At(x, y).RGBA()
-						r = (r - min) * 255 / (max - min)
-						rgbaImg.Set(x, y, color.RGBA{R: uint8(r), G: uint8(r), B: uint8(r), A: 255})
-					}
-				}
-
-				tmp, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0o644)
-				if err != nil {
-					return err
-				}
-				defer tmp.Close()
-
-				return png.Encode(tmp, rgbaImg)
-			})
-
-			i++
-
-			return true, nil
-		})
-		require.NoError(t, eg.Wait())
-	})
-
-	t.Run("export image from grid_simple", func(t *testing.T) {
-		t.Parallel()
-
-		var i int
-		const celsiusZero = 273.15
-		var max, min float64 = celsiusZero + 50, celsiusZero - 50
-		var eg errgroup.Group
-
-		_ = g1.EachMessage(func(msg grib.IndexedMessage) (next bool, err error) {
-			require.Equal(t, 1440, msg.GetNi())
-			require.Equal(t, 721, msg.GetNj())
-
-			require.IsType(t, &gridpoint.SimplePacking{}, msg.GetDataRepresentationTemplate())
-			filename := fmt.Sprintf("../../tmp/2t_heightAboveGround_2_0_0.%d.png", i)
-			r := gridpoint.NewSimplePackingReader(mm1, msg.GetDataOffset(), msg.GetSize()-msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking))
-			bounds := image.Rect(0, 0, msg.GetNi(), msg.GetNj())
-
-			tmp, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0o644)
-			if err != nil {
-				return false, err
-			}
-
-			eg.Go(func() error {
-				defer tmp.Close()
-				rgbaImg := image.NewGray16(bounds)
-				for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-					for x := bounds.Min.X; x < bounds.Max.X; x++ {
-						grd := y*msg.GetNi() + x
-						val, err := r.ReadGridAt(grd)
-						if err != nil {
-							return err
-						}
-
-						gray := colormap.GrayColorMap.GetColor(val, min, max)
-						rgbaImg.Set(x, y, gray)
-					}
-				}
-
-				return png.Encode(tmp, rgbaImg)
-			})
-
-			i++
-
-			return true, nil
-		})
-		require.NoError(t, eg.Wait())
-	})
 }

@@ -11,6 +11,7 @@ require (
 	github.com/scorix/go-eccodes v0.1.5
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
+	golang.org/x/image v0.21.0
 	golang.org/x/sync v0.8.0
 )
 
