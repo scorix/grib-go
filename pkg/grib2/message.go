@@ -31,6 +31,7 @@ type Message interface {
 	GetNi() int
 	GetNj() int
 	GetSize() int64
+	GetDataSize() int64
 	DumpMessageIndex() (*MessageIndex, error)
 }
 
@@ -189,6 +190,10 @@ func (m *message) GetDataOffset() int64 {
 
 func (m *message) GetSize() int64 {
 	return int64(m.sec0.GribLength)
+}
+
+func (m *message) GetDataSize() int64 {
+	return m.sec7.dataSize
 }
 
 func (m *message) GetScanningMode() (gdt.ScanningMode, error) {
