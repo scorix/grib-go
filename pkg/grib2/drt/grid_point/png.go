@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"io"
 
+	"github.com/scorix/grib-go/internal/pkg/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
@@ -49,7 +50,7 @@ func (p *PortableNetworkGraphics) ScaleFunc() func(uint32) float64 {
 	return datapacking.SimpleScaleFunc(p.BinaryScaleFactor, p.DecimalScaleFactor, p.ReferenceValue)
 }
 
-func (p *PortableNetworkGraphics) ReadAllData(r datapacking.BitReader) ([]float64, error) {
+func (p *PortableNetworkGraphics) ReadAllData(r *bitio.Reader) ([]float64, error) {
 	var err error
 	values := make([]float64, p.NumVals)
 	scaleFunc := p.ScaleFunc()

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/scorix/grib-go/internal/pkg/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
@@ -23,7 +24,7 @@ func NewComplexPackingAndSpatialDifferencing(def definition.ComplexPackingAndSpa
 	}
 }
 
-func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r datapacking.BitReader) ([]float64, error) {
+func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r *bitio.Reader) ([]float64, error) {
 	sd, err := cpsd.ReadSpacingDifferential(r)
 	if err != nil {
 		return nil, fmt.Errorf("read spacing differential value: %w", err)

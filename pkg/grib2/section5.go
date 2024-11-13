@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/icza/bitio"
+	"github.com/scorix/grib-go/internal/pkg/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/definition"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
 )

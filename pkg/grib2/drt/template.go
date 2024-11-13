@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/scorix/grib-go/internal/pkg/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
@@ -39,7 +40,7 @@ const (
 type Template interface {
 	GetNumVals() int
 	Definition() any
-	ReadAllData(r datapacking.BitReader) ([]float64, error)
+	ReadAllData(r *bitio.Reader) ([]float64, error)
 }
 
 func ReadTemplate(r datapacking.BitReader, n TemplateNumber, numVals int) (Template, error) {

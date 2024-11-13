@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	"github.com/icza/bitio"
 	ossio "github.com/scorix/aliyun-oss-io"
+	"github.com/scorix/grib-go/internal/pkg/bitio"
 	"github.com/scorix/grib-go/pkg/grib2"
 	grib "github.com/scorix/grib-go/pkg/grib2"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
