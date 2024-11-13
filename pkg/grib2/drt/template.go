@@ -40,7 +40,7 @@ const (
 type Template interface {
 	GetNumVals() int
 	Definition() any
-	ReadAllData(r *bitio.Reader) ([]float64, error)
+	ReadAllData(r *bitio.Reader) ([]float32, error)
 }
 
 func ReadTemplate(r datapacking.BitReader, n TemplateNumber, numVals int) (Template, error) {

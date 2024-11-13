@@ -1006,7 +1006,7 @@ func TestSection7_ReadData_SimplePacking(t *testing.T) {
 	}
 
 	for i, v := range exampleValues {
-		assert.InDelta(t, v, data[i], 1e-8)
+		assert.InDelta(t, v, data[i], 1e-3)
 	}
 }
 
@@ -1067,7 +1067,7 @@ func TestSection7_ReadData_ComplexPacking(t *testing.T) {
 	}
 
 	for i, v := range exampleValues {
-		assert.InDelta(t, v, data[i], 1e-8)
+		assert.InDelta(t, v, data[i], 1e-3)
 	}
 }
 
@@ -1127,7 +1127,7 @@ func TestSection7_ReadData_ComplexPackingAndSpatialDifferencing(t *testing.T) {
 	}
 
 	for i, v := range exampleValues {
-		assert.InDelta(t, v, data[i], 1e-8)
+		assert.InDelta(t, v, data[i], 1e-3)
 	}
 }
 
@@ -1445,6 +1445,10 @@ func TestGrib2_ReadMessageAt(t *testing.T) {
 			accessKeyId     = os.Getenv("ALIYUN_OSS_ACCESS_KEY_ID")
 			accessKeySecret = os.Getenv("ALIYUN_OSS_ACCESS_KEY_SECRET")
 		)
+
+		if endpoint == "" || accessKeyId == "" || accessKeySecret == "" {
+			t.Skip("oss env not set")
+		}
 
 		ctx := context.TODO()
 		cli, err := oss.New(

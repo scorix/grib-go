@@ -38,22 +38,22 @@ func NewComplexPacking(def definition.ComplexPacking, numVals int) *ComplexPacki
 	}
 }
 
-func (cp *ComplexPacking) missingValueSubstitute() (float64, float64, error) {
+func (cp *ComplexPacking) missingValueSubstitute() (float32, float32, error) {
 	switch cp.MissingValueManagementUsed {
 	case 0, -1:
 		return 0, 0, nil
 	case 1:
-		return float64(cp.PrimaryMissingSubstitute), 0, nil
+		return float32(cp.PrimaryMissingSubstitute), 0, nil
 	case 2:
-		return float64(cp.PrimaryMissingSubstitute), float64(cp.SecondaryMissingSubstitute), nil
+		return float32(cp.PrimaryMissingSubstitute), float32(cp.SecondaryMissingSubstitute), nil
 	}
 
 	return 0, 0, fmt.Errorf("unimplemented")
 }
 
-type scaleGroupDataFunc func(data []uint32, missing []uint32, primary float64, secondary float64, scaleFunc func(uint32) float64) ([]float64, error)
+type scaleGroupDataFunc func(data []uint32, missing []uint32, primary float32, secondary float32, scaleFunc func(uint32) float32) ([]float32, error)
 
-func (cp *ComplexPacking) unpackData(r *bitio.Reader, groups []Group, f scaleGroupDataFunc) ([]float64, error) {
+func (cp *ComplexPacking) unpackData(r *bitio.Reader, groups []Group, f scaleGroupDataFunc) ([]float32, error) {
 	data := make([]uint32, cp.NumVals)
 	miss := make([]uint32, 0, cp.NumVals)
 	idx := 0
@@ -121,7 +121,7 @@ func (cp *ComplexPacking) unpackData(r *bitio.Reader, groups []Group, f scaleGro
 	return f(data, miss, primary, secondary, cp.ScaleFunc())
 }
 
-func (cp *ComplexPacking) ReadAllData(r *bitio.Reader) ([]float64, error) {
+func (cp *ComplexPacking) ReadAllData(r *bitio.Reader) ([]float32, error) {
 	groups, err := cp.ReadGroups(r, cp.Bits)
 	if err != nil {
 		return nil, fmt.Errorf("read groups: %w", err)
@@ -134,8 +134,8 @@ func (cp *ComplexPacking) ReadAllData(r *bitio.Reader) ([]float64, error) {
 	return cp.unpackData(r, groups, cp.scaleValues)
 }
 
-func (cp *ComplexPacking) scaleValues(data []uint32, miss []uint32, primary float64, secondary float64, scaleFunc func(uint32) float64) ([]float64, error) {
-	values := make([]float64, len(data))
+func (cp *ComplexPacking) scaleValues(data []uint32, miss []uint32, primary float32, secondary float32, scaleFunc func(uint32) float32) ([]float32, error) {
+	values := make([]float32, len(data))
 
 	switch cp.MissingValueManagementUsed {
 	case 0:

@@ -24,7 +24,7 @@ func NewComplexPackingAndSpatialDifferencing(def definition.ComplexPackingAndSpa
 	}
 }
 
-func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r *bitio.Reader) ([]float64, error) {
+func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r *bitio.Reader) ([]float32, error) {
 	sd, err := cpsd.ReadSpacingDifferential(r)
 	if err != nil {
 		return nil, fmt.Errorf("read spacing differential value: %w", err)
@@ -39,7 +39,7 @@ func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r *bitio.Reader) (
 		return nil, fmt.Errorf("expected groups: %d, got %d", cpsd.NumberOfGroups, len(groups))
 	}
 
-	data, err := cpsd.unpackData(r, groups, func(data, miss []uint32, primary, secondary float64, scaleFunc func(uint32) float64) ([]float64, error) {
+	data, err := cpsd.unpackData(r, groups, func(data, miss []uint32, primary, secondary float32, scaleFunc func(uint32) float32) ([]float32, error) {
 		sd.Apply(data)
 
 		return cpsd.scaleValues(data, miss, primary, secondary, cpsd.ScaleFunc())

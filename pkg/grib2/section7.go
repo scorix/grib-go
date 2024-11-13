@@ -13,7 +13,7 @@ import (
 
 type Section7 interface {
 	Section
-	GetData(drt.Template) ([]float64, error)
+	GetData(drt.Template) ([]float32, error)
 	GetDataOffset() int64
 }
 
@@ -66,7 +66,7 @@ func (s *section7) LoadData() error {
 	return s.readDataErr
 }
 
-func (s *section7) GetData(tpl drt.Template) ([]float64, error) {
+func (s *section7) GetData(tpl drt.Template) ([]float32, error) {
 	if err := s.LoadData(); err != nil {
 		return nil, err
 	}
