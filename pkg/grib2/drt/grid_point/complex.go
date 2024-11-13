@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/scorix/grib-go/pkg/grib2/drt/datapacking"
+	"github.com/scorix/grib-go/internal/pkg/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/drt/definition"
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 )
@@ -53,7 +53,7 @@ func (cp *ComplexPacking) missingValueSubstitute() (float64, float64, error) {
 
 type scaleGroupDataFunc func(data []uint32, missing []uint32, primary float64, secondary float64, scaleFunc func(uint32) float64) ([]float64, error)
 
-func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []Group, f scaleGroupDataFunc) ([]float64, error) {
+func (cp *ComplexPacking) unpackData(r *bitio.Reader, groups []Group, f scaleGroupDataFunc) ([]float64, error) {
 	data := make([]uint32, cp.NumVals)
 	miss := make([]uint32, 0, cp.NumVals)
 	idx := 0
@@ -121,7 +121,7 @@ func (cp *ComplexPacking) unpackData(r datapacking.BitReader, groups []Group, f 
 	return f(data, miss, primary, secondary, cp.ScaleFunc())
 }
 
-func (cp *ComplexPacking) ReadAllData(r datapacking.BitReader) ([]float64, error) {
+func (cp *ComplexPacking) ReadAllData(r *bitio.Reader) ([]float64, error) {
 	groups, err := cp.ReadGroups(r, cp.Bits)
 	if err != nil {
 		return nil, fmt.Errorf("read groups: %w", err)
@@ -233,7 +233,7 @@ type Group struct {
 	width  uint8
 }
 
-func (g Grouping) ReadGroups(r datapacking.BitReader, bits uint8) ([]Group, error) {
+func (g Grouping) ReadGroups(r *bitio.Reader, bits uint8) ([]Group, error) {
 	references := make([]uint32, g.NumberOfGroups)
 	for n := range g.NumberOfGroups {
 		b, err := r.ReadBits(bits)
@@ -290,7 +290,7 @@ func (g Grouping) ReadGroups(r datapacking.BitReader, bits uint8) ([]Group, erro
 	return groups, nil
 }
 
-func (g *Group) ReadData(r datapacking.BitReader) ([]uint32, error) {
+func (g *Group) ReadData(r *bitio.Reader) ([]uint32, error) {
 	data := make([]uint32, g.length)
 
 	if g.width == 0 {

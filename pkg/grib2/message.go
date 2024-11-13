@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/icza/bitio"
+	"github.com/scorix/grib-go/internal/pkg/bitio"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 	"github.com/scorix/grib-go/pkg/grib2/gdt"
