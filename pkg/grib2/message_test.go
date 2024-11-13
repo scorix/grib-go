@@ -150,6 +150,7 @@ func TestMessage_DumpMessageIndex(t *testing.T) {
 					DecimalScaleFactor: 0,
 					Bits:               17,
 					Type:               0,
+					NumVals:            1038240,
 				},
 			},
 		},

@@ -32,13 +32,13 @@ func NewSimplePacking(def definition.SimplePacking, numVals int) *SimplePacking 
 	}
 }
 
-func (sp *SimplePacking) ScaleFunc() func(uint32) float64 {
+func (sp *SimplePacking) ScaleFunc() func(uint32) float32 {
 	return datapacking.SimpleScaleFunc(sp.BinaryScaleFactor, sp.DecimalScaleFactor, sp.ReferenceValue)
 }
 
-func (sp *SimplePacking) ReadAllData(r *bitio.Reader) ([]float64, error) {
+func (sp *SimplePacking) ReadAllData(r *bitio.Reader) ([]float32, error) {
 	var (
-		values    []float64
+		values    []float32
 		scaleFunc = sp.ScaleFunc()
 	)
 
@@ -85,7 +85,7 @@ func (sp *SimplePacking) Definition() any {
 type SimplePackingReader struct {
 	r      io.ReaderAt
 	sp     *SimplePacking
-	sf     func(uint32) float64
+	sf     func(uint32) float32
 	offset int64
 	length int64
 }
@@ -100,7 +100,7 @@ func NewSimplePackingReader(r io.ReaderAt, start, end int64, sp *SimplePacking) 
 	}
 }
 
-func (r *SimplePackingReader) ReadGridAt(n int) (float64, error) {
+func (r *SimplePackingReader) ReadGridAt(n int) (float32, error) {
 	if n >= r.sp.NumVals {
 		return 0, fmt.Errorf("requesting[%d] is out of range, total number of values is %d", n, r.sp.NumVals)
 	}

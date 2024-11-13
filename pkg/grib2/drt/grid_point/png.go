@@ -46,19 +46,19 @@ func (p *PortableNetworkGraphics) GetNumVals() int {
 	return p.NumVals
 }
 
-func (p *PortableNetworkGraphics) ScaleFunc() func(uint32) float64 {
+func (p *PortableNetworkGraphics) ScaleFunc() func(uint32) float32 {
 	return datapacking.SimpleScaleFunc(p.BinaryScaleFactor, p.DecimalScaleFactor, p.ReferenceValue)
 }
 
-func (p *PortableNetworkGraphics) ReadAllData(r *bitio.Reader) ([]float64, error) {
+func (p *PortableNetworkGraphics) ReadAllData(r *bitio.Reader) ([]float32, error) {
 	var err error
-	values := make([]float64, p.NumVals)
+	values := make([]float32, p.NumVals)
 	scaleFunc := p.ScaleFunc()
 
 	// Special case: if bits per value is 0, all values are equal to the reference value
 	if p.Bits == 0 {
 		for i := range values {
-			values[i] = float64(p.ReferenceValue)
+			values[i] = p.ReferenceValue
 		}
 		return values, nil
 	}
@@ -119,7 +119,7 @@ func (p *PortableNetworkGraphics) Image(r datapacking.BitReader) (image.Image, e
 type PortableNetworkGraphicsReader struct {
 	r      io.ReaderAt
 	p      *PortableNetworkGraphics
-	sf     func(uint32) float64
+	sf     func(uint32) float32
 	offset int64
 	length int64
 }

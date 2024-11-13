@@ -22,7 +22,7 @@ type Message interface {
 	GetDataRepresentationTemplate() drt.Template
 	GetScanningMode() (gdt.ScanningMode, error)
 
-	ReadData() ([]float64, error)
+	ReadData() ([]float32, error)
 	Image() (image.Image, error)
 	Step() int
 
@@ -96,7 +96,7 @@ func (m *message) GetLevel() int {
 	return m.sec4.GetProductDefinitionTemplate().GetLevel()
 }
 
-func (m *message) ReadData() ([]float64, error) {
+func (m *message) ReadData() ([]float32, error) {
 	tpl := m.sec5.GetDataRepresentationTemplate()
 	if err := m.sec7.LoadData(); err != nil {
 		return nil, fmt.Errorf("load data from section 7: %w", err)
@@ -251,7 +251,7 @@ func (m *message) Image() (image.Image, error) {
 }
 
 type MessageReader interface {
-	ReadLL(float32, float32) (float32, float32, float64, error)
+	ReadLL(float32, float32) (float32, float32, float32, error)
 }
 
 type simplePackingMessageReader struct {
@@ -291,7 +291,7 @@ func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageInd
 	return NewSimplePackingMessageReader(r, mi.Offset, mi.Size, mi.DataOffset, sp, mi.ScanningMode)
 }
 
-func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float64, error) {
+func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float32, error) {
 	grid := r.sm.GetGridPointFromLL(lat, lon)
 	lat, lng := r.sm.GetGridPointLL(grid)
 

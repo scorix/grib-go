@@ -27,14 +27,14 @@ func DecimalScaleFactor(d int16) float64 {
 //
 // X1 = Reference value (scaled integer) of the group the data value belongs to,
 // X2 = Scaled (encoded) value with the group reference value (XI) removed..
-func SimpleScaleFunc(e int16, d int16, r float32) func(x2 uint32) float64 {
+func SimpleScaleFunc(e int16, d int16, r float32) func(x2 uint32) float32 {
 	var (
 		dec   = DecimalScaleFactor(d)
 		ref   = float64(r) / dec
 		scale = BinaryScaleFactor(e) / dec
 	)
 
-	return func(x2 uint32) float64 {
-		return ref + float64(x2)*scale
+	return func(x2 uint32) float32 {
+		return float32(ref + float64(x2)*scale)
 	}
 }
