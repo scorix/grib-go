@@ -2,7 +2,6 @@ package gdt
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 )
@@ -95,13 +94,6 @@ type Template0FixedPart struct {
 	ScanningMode                           int8
 }
 
-type ScanningMode interface {
-	GetScanMode() int8
-
-	GetGridPointLL(n int) (float32, float32)
-	GetGridPointFromLL(lat float32, lng float32) int
-}
-
 func (t *Template0FixedPart) GetScanningMode() (ScanningMode, error) {
 	switch t.ScanningMode {
 	case 0:
@@ -115,6 +107,8 @@ func (t *Template0FixedPart) GetScanningMode() (ScanningMode, error) {
 			LongitudeOfLastGridPoint:    t.LongitudeOfLastGridPoint,
 			IDirectionIncrement:         t.IDirectionIncrement,
 			JDirectionIncrement:         t.JDirectionIncrement,
+			getGridIndexFunc:            t.GetGridIndex,
+			getGridPointByIndexFunc:     t.GetGridPointLL,
 		}
 
 		return &sm, nil
@@ -131,66 +125,10 @@ func (t *Template0FixedPart) GetNj() int32 {
 	return t.Nj
 }
 
-type ScanningMode0000 struct {
-	Ni                          int32 `json:"ni"`
-	Nj                          int32 `json:"nj"`
-	LatitudeOfFirstGridPoint    int32 `json:"latitudeOfFirstGridPoint"`
-	LongitudeOfFirstGridPoint   int32 `json:"longitudeOfFirstGridPoint"`
-	ResolutionAndComponentFlags int8  `json:"resolutionAndComponentFlags"`
-	LatitudeOfLastGridPoint     int32 `json:"latitudeOfLastGridPoint"`
-	LongitudeOfLastGridPoint    int32 `json:"longitudeOfLastGridPoint"`
-	IDirectionIncrement         int32 `json:"iDirectionIncrement"`
-	JDirectionIncrement         int32 `json:"jDirectionIncrement"`
+func (t *Template0FixedPart) GetGridIndex(lat, lon float32) (i, j, n int) {
+	return GetRegularLLGridIndex(lat, lon, t.LatitudeOfFirstGridPoint, t.LongitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.LongitudeOfLastGridPoint, t.IDirectionIncrement, t.JDirectionIncrement)
 }
 
-func (sm *ScanningMode0000) GetLatitudeGridPoint(n int) int {
-	latFirst, latLast, inc := sm.LatitudeOfFirstGridPoint, sm.LatitudeOfLastGridPoint, sm.IDirectionIncrement
-	if (latFirst-latLast)/sm.IDirectionIncrement < 0 {
-		inc = -inc
-	}
-
-	return int(latFirst) - (n/int(sm.Ni))*int(inc)
-}
-
-func (sm *ScanningMode0000) GetLatitudeGridIndex(lat float32) int {
-	latFirst, latLast, inc := sm.LatitudeOfFirstGridPoint, sm.LatitudeOfLastGridPoint, sm.IDirectionIncrement
-	if (latFirst-latLast)/sm.IDirectionIncrement < 0 {
-		inc = -inc
-	}
-
-	return int(math.Round(float64(int(latFirst)-toInt(lat)) / float64(inc)))
-}
-
-func (sm *ScanningMode0000) GetLongitudeGridPoint(n int) int {
-	lonFirst, lonLast, inc := sm.LongitudeOfFirstGridPoint, sm.LongitudeOfLastGridPoint, sm.JDirectionIncrement
-	if (lonFirst-lonLast)/sm.JDirectionIncrement < 0 {
-		inc = -inc
-	}
-
-	return int(lonFirst) - (n%int(sm.Ni))*int(inc)
-}
-
-func (sm *ScanningMode0000) GetLongitudeGridIndex(lng float32) int {
-	lonFirst, lonLast, inc := sm.LongitudeOfFirstGridPoint, sm.LongitudeOfLastGridPoint, sm.JDirectionIncrement
-	if (lonFirst-lonLast)/sm.JDirectionIncrement < 0 {
-		inc = -inc
-	}
-
-	return int(math.Round(float64(int(lonFirst)-toInt(lng)) / float64(inc)))
-}
-
-func (sm *ScanningMode0000) GetGridPointLL(n int) (float32, float32) {
-	return regulation.DegreedLatitudeLongitude(sm.GetLatitudeGridPoint(n)), regulation.DegreedLatitudeLongitude(sm.GetLongitudeGridPoint(n))
-}
-
-func (sm *ScanningMode0000) GetGridPointFromLL(lat float32, lng float32) int {
-	return sm.GetLatitudeGridIndex(lat)*int(sm.Ni) + sm.GetLongitudeGridIndex(lng)
-}
-
-func (sm *ScanningMode0000) GetScanMode() int8 {
-	return 0
-}
-
-func toInt(v float32) int {
-	return int(math.Round(float64(v) * 1e6))
+func (t *Template0FixedPart) GetGridPointLL(i, j int) (lat, lon float32) {
+	return GetRegularLLGridPointByIndex(i, j, t.LatitudeOfFirstGridPoint, t.LongitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.LongitudeOfLastGridPoint, t.IDirectionIncrement, t.JDirectionIncrement)
 }
