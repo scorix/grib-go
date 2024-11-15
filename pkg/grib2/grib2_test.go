@@ -1198,6 +1198,66 @@ func TestSection7_ReadData_PortableNetworkGraphics(t *testing.T) {
 	}
 }
 
+func TestSection7_ReadData_RegularGG(t *testing.T) {
+	t.Parallel()
+
+	f, err := os.Open("../testdata/regular_gg.grib2")
+	require.NoError(t, err)
+	defer f.Close()
+
+	g := grib.NewGrib2(f)
+
+	var sec7 grib2.Section7
+	var tpl drt.Template
+	var dataLen int
+
+	var offset int64
+
+	for {
+		sec, err := g.ReadSectionAt(offset)
+		require.NoError(t, err)
+
+		offset += int64(sec.Length())
+
+		if sec.Number() == 5 {
+			tpl = sec.(grib2.Section5).GetDataRepresentationTemplate()
+			dataLen = sec.(grib2.Section5).GetNumberOfValues()
+			require.Equal(t, 4718592, dataLen)
+		}
+
+		if sec.Number() == 7 {
+			sec7 = sec.(grib2.Section7)
+
+			break
+		}
+	}
+
+	data, err := sec7.GetData(tpl)
+	require.NoError(t, err)
+	require.Equal(t, dataLen, len(data))
+
+	// grib_dump -O pkg/testdata/hpbl.grib2
+	exampleValues := []float64{
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0,
+	}
+
+	for i, v := range exampleValues {
+		assert.InDelta(t, v, data[i], 1e-5)
+	}
+}
+
 func TestGrib2_ReadMessages(t *testing.T) {
 	t.Parallel()
 	// aws s3 cp --no-sign-request s3://noaa-gfs-bdp-pds/gfs.20240820/12/atmos/gfs.t12z.pgrb2.0p25.f044 pkg/testdata/gfs.t12z.pgrb2.0p25.f044

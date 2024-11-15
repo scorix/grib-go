@@ -11,6 +11,7 @@ type Template interface {
 	GetScanningMode() (ScanningMode, error)
 	GetNi() int32
 	GetNj() int32
+	GetGridIndex(lat, lon float32) (i, j, n int)
 }
 
 type MissingTemplate struct{}
@@ -21,6 +22,9 @@ func (m MissingTemplate) GetScanningMode() (ScanningMode, error) {
 func (m MissingTemplate) GetGridPointFromLL(float32, float32) int { return 0 }
 func (m MissingTemplate) GetNi() int32                            { return 0 }
 func (m MissingTemplate) GetNj() int32                            { return 0 }
+func (m MissingTemplate) GetGridIndex(lat, lon float32) (i, j, n int) {
+	return 0, 0, 0
+}
 
 func ReadTemplate(r io.Reader, n uint16) (Template, error) {
 	switch n {
@@ -31,6 +35,14 @@ func ReadTemplate(r io.Reader, n uint16) (Template, error) {
 		}
 
 		return &Template0{Template0FixedPart: tpl.Export()}, nil
+
+	case 40:
+		var tpl template40FixedPart
+		if err := binary.Read(r, binary.BigEndian, &tpl); err != nil {
+			return nil, err
+		}
+
+		return &Template40{Template40FixedPart: tpl.Export()}, nil
 
 	case 255:
 		return &MissingTemplate{}, nil

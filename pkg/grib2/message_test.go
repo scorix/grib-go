@@ -20,14 +20,13 @@ func TestMessageReader_ReadLL(t *testing.T) {
 	t.Parallel()
 
 	// grib_set -r -s packingType=grid_simple pkg/testdata/hpbl.grib2 pkg/testdata/hpbl.grib2.out
-	const filename = "../testdata/hpbl.grib2.out"
+	t.Run("regular_ll", func(t *testing.T) {
+		const filename = "../testdata/hpbl.grib2.out"
 
-	s, err := os.Stat(filename)
-	if errors.Is(err, os.ErrNotExist) {
-		t.Skipf("%s not exist", filename)
-	}
+		if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+			t.Skipf("%s not exist", filename)
+		}
 
-	t.Run(s.Name(), func(t *testing.T) {
 		t.Parallel()
 
 		f, err := os.Open(filename)
@@ -78,7 +77,7 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			lat32 := regulation.DegreedLatitudeLongitude(int(lat * 1e6))
 			lng32 := regulation.DegreedLatitudeLongitude(int(lng * 1e6))
 
-			grd, err := msg.GetGridPointFromLL(lat32, lng32)
+			_, _, grd, err := msg.GetGridPointFromLL(lat32, lng32)
 			require.NoError(t, err)
 			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
@@ -96,6 +95,97 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			}
 
 		}
+	})
+
+	// grib_set -r -s packingType=grid_simple pkg/testdata/regular_gg.grib2 pkg/testdata/regular_gg.grib2.out
+	t.Run("regular_gg", func(t *testing.T) {
+		const filename = "../testdata/regular_gg.grib2.out"
+
+		if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+			t.Skipf("%s not exist", filename)
+		}
+
+		t.Parallel()
+
+		f, err := os.Open(filename)
+		require.NoError(t, err)
+		defer f.Close()
+
+		cf, err := cio.OpenFile(f.Name(), "r")
+		require.NoError(t, err)
+		defer cf.Close()
+
+		cgrib, err := codes.OpenFile(cf)
+		require.NoError(t, err)
+		defer cgrib.Close()
+
+		handle, err := cgrib.Handle()
+		require.NoError(t, err)
+		defer handle.Close()
+
+		cmsg := handle.Message()
+		defer cmsg.Close()
+
+		iter, err := cmsg.Iterator()
+		require.NoError(t, err)
+		defer iter.Close()
+
+		g := grib.NewGrib2(f)
+
+		msg, err := g.ReadMessageAt(0)
+		require.NoError(t, err)
+		require.NotNil(t, msg)
+
+		require.Equal(t, 1, msg.GetTypeOfFirstFixedSurface())
+		require.Equal(t, int64(10027187), msg.GetSize())
+		require.Equal(t, int64(0), msg.GetOffset())
+		require.Equal(t, int64(175), msg.GetDataOffset())
+
+		mm, err := mmap.Open(f.Name())
+		require.NoError(t, err)
+
+		sm, err := msg.GetScanningMode()
+		require.NoError(t, err)
+
+		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetOffset(), msg.GetSize(), msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), sm)
+		require.NoError(t, err)
+
+		errorItemsCount := 0
+		totalItemsCount := 0
+
+		for i := 0; iter.HasNext(); i++ {
+			lat, lng, val, _ := iter.Next()
+			lat32 := regulation.DegreedLatitudeLongitude(int(lat * 1e6))
+			lng32 := regulation.DegreedLatitudeLongitude(int(lng * 1e6))
+
+			_, _, grd, err := msg.GetGridPointFromLL(lat32, lng32)
+			require.NoError(t, err)
+
+			totalItemsCount++
+			if i != grd {
+				errorItemsCount++
+				continue
+			}
+
+			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
+
+			{
+				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				require.NoError(t, err)
+				require.InDelta(t, float32(val), float32(v), 1e-5)
+			}
+
+			{
+				// read again
+				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				require.NoError(t, err)
+				require.InDelta(t, float32(val), float32(v), 1e-5)
+			}
+		}
+
+		errorRate := float64(errorItemsCount) / float64(totalItemsCount)
+		t.Logf("error rate: %f, total items: %d, error items: %d", errorRate, totalItemsCount, errorItemsCount)
+		require.Less(t, errorRate, 0.01)
 	})
 }
 

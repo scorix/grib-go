@@ -26,8 +26,8 @@ type Message interface {
 	Image() (image.Image, error)
 	Step() int
 
-	GetGridPointLL(n int) (float32, float32, error)
-	GetGridPointFromLL(float32, float32) (int, error)
+	GetGridPointLL(i, j int) (float32, float32, error)
+	GetGridPointFromLL(lat float32, lon float32) (i, j, n int, err error)
 	GetNi() int
 	GetNj() int
 	GetSize() int64
@@ -149,26 +149,26 @@ func (m *message) GetDataRepresentationTemplate() drt.Template {
 	return m.sec5.DataRepresentationTemplate
 }
 
-func (m *message) GetGridPointLL(n int) (float32, float32, error) {
+func (m *message) GetGridPointLL(i, j int) (float32, float32, error) {
 	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
 	if err != nil {
 		return 0, 0, fmt.Errorf("get scanning mode: %w", err)
 	}
 
-	lat, lng := sm.GetGridPointLL(n)
+	lat, lng := sm.GetGridPointLL(i, j)
 
 	return lat, lng, nil
 }
 
-func (m *message) GetGridPointFromLL(lat float32, lon float32) (int, error) {
+func (m *message) GetGridPointFromLL(lat float32, lon float32) (int, int, int, error) {
 	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
 	if err != nil {
-		return 0, fmt.Errorf("get scanning mode: %w", err)
+		return 0, 0, 0, fmt.Errorf("get scanning mode: %w", err)
 	}
 
-	n := sm.GetGridPointFromLL(lat, lon)
+	i, j, n := sm.GetGridPointFromLL(lat, lon)
 
-	return n, nil
+	return i, j, n, nil
 }
 
 func (m *message) GetNi() int {
@@ -292,8 +292,8 @@ func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageInd
 }
 
 func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float32, error) {
-	grid := r.sm.GetGridPointFromLL(lat, lon)
-	lat, lng := r.sm.GetGridPointLL(grid)
+	i, j, grid := r.sm.GetGridPointFromLL(lat, lon)
+	lat, lng := r.sm.GetGridPointLL(i, j)
 
 	v, err := r.spr.ReadGridAt(grid)
 	if err != nil {
