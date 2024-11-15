@@ -238,7 +238,7 @@ func (g Grouping) ReadGroups(r *bitio.Reader, bits uint8) ([]Group, error) {
 	for n := range g.NumberOfGroups {
 		b, err := r.ReadBits(bits)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("reference: %w", err)
 		}
 
 		references[n] = uint32(b)
@@ -250,7 +250,7 @@ func (g Grouping) ReadGroups(r *bitio.Reader, bits uint8) ([]Group, error) {
 	for n := range g.NumberOfGroups {
 		b, err := r.ReadBits(g.WidthsBits)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("widths: %w", err)
 		}
 
 		if int(b)+int(g.Widths) < 0 {
@@ -266,7 +266,7 @@ func (g Grouping) ReadGroups(r *bitio.Reader, bits uint8) ([]Group, error) {
 	for n := range g.NumberOfGroups {
 		b, err := r.ReadBits(g.ScaledLengthsBits)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("lengths: %w", err)
 		}
 
 		lengths[n] = b*uint64(g.LengthIncrement) + uint64(g.LengthsReference)
