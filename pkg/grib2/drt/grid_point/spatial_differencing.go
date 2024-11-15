@@ -32,12 +32,14 @@ func (cpsd *ComplexPackingAndSpatialDifferencing) ReadAllData(r *bitio.Reader) (
 
 	groups, err := cpsd.ReadGroups(r, cpsd.Bits)
 	if err != nil {
-		return nil, fmt.Errorf("read groups: %w", err)
+		return nil, fmt.Errorf("groups: %w", err)
 	}
 
 	if len(groups) != int(cpsd.NumberOfGroups) {
 		return nil, fmt.Errorf("expected groups: %d, got %d", cpsd.NumberOfGroups, len(groups))
 	}
+
+	r.Align()
 
 	data, err := cpsd.unpackData(r, groups, func(data, miss []uint32, primary, secondary float32, scaleFunc func(uint32) float32) ([]float32, error) {
 		sd.Apply(data)

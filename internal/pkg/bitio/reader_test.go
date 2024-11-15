@@ -67,11 +67,10 @@ func TestReader(t *testing.T) {
 		assert.Equal(t, uint64(0b101101001100), got)
 	})
 
-	t.Run("error on too many bits", func(t *testing.T) {
+	t.Run("eof", func(t *testing.T) {
 		reader := bitio.NewReader(bytes.NewReader([]byte{0xFF}))
 		_, err := reader.ReadBits(65)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot read more than 64 bits")
+		assert.ErrorIs(t, err, io.EOF)
 	})
 
 	t.Run("read after partial bits", func(t *testing.T) {

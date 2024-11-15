@@ -104,7 +104,7 @@ func (m *message) ReadData() ([]float32, error) {
 
 	data, err := tpl.ReadAllData(bitio.NewReader(bytes.NewReader(m.sec7.Data)))
 	if err != nil {
-		return nil, fmt.Errorf("read data using template: %w", err)
+		return nil, fmt.Errorf("read data using template %T: %w", tpl, err)
 	}
 	return data, nil
 }

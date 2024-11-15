@@ -160,15 +160,14 @@ func TestMessageReader_ReadLL(t *testing.T) {
 
 			_, _, grd, err := msg.GetGridPointFromLL(lat32, lng32)
 			require.NoError(t, err)
+			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
 			totalItemsCount++
 			if i != grd {
-				t.Logf("expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
+				// t.Logf("expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 				errorItemsCount++
 				continue
 			}
-
-			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
 			{
 				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out

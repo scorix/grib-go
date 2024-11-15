@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/mmap"
-	"golang.org/x/sync/errgroup"
 )
 
 func assertSection(t testing.TB, sec grib2.Section, number int, length int) {
@@ -1298,20 +1297,12 @@ func TestGrib2_ReadMessages(t *testing.T) {
 
 		assert.Equal(t, 743, len(msgs))
 
-		eg, _ := errgroup.WithContext(context.TODO())
-		eg.SetLimit(1)
 		for i, msg := range msgs {
-			eg.Go(func() error {
-				data, err := msg.ReadData()
-				require.NoError(t, err)
+			data, err := msg.ReadData()
+			require.NoError(t, err)
 
-				t.Logf("count: %d, discipline: %d, category: %d, number: %d, forecast: %s, dataLen: %d", i+1, msg.GetDiscipline(), msg.GetParameterCategory(), msg.GetParameterNumber(), msg.GetForecastTime(time.UTC), len(data))
-
-				return nil
-			})
+			t.Logf("count: %d, discipline: %d, category: %d, number: %d, forecast: %s, dataLen: %d", i+1, msg.GetDiscipline(), msg.GetParameterCategory(), msg.GetParameterNumber(), msg.GetForecastTime(time.UTC), len(data))
 		}
-
-		require.NoError(t, eg.Wait())
 	})
 }
 
