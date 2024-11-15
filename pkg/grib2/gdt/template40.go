@@ -6,9 +6,22 @@ import (
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
 )
 
+/*
+Notes:
+( 1) Basic angle of the initial production domain and subdivisions of this basic angle are provided to manage cases where the recommended unit of 10-6 degrees is not applicable to describe the extreme longitudes and latitudes, and direction increments. For these last six descriptors, unit is equal to the ratio of the basic angle and the subdivisions number. For ordinary cases, zero and missing values should be coded, equivalent to respective values of 1 and 106 (10-6 degrees unit).
+
+( 2) The number of parallels between a pole and the equator is used to establish the variable (Gaussian) spacing of the parallels; this value must always be given.
+
+( 3) A scaled value of radius of spherical Earth, or major or minor axis of oblate spheroid Earth is derived from applying appropriate scale factor to the value expressed in metres.
+
+( 4) A quasi-regular grid is only defined for appropriate grid scanning modes. Either rows or columns, but not both simultaneously, may have variable numbers of points. The first point in each row (column) shall be positioned at the meridian (parallel) indicated by Octets 47-54. The grid points shall be evenly spaced in latitude (longitude).
+
+( 5) It is recommended to use unsigned direction increments
+*/
+
 type Template40 struct {
 	Template40FixedPart
-	// TODO: 73-nn: List of number of points along each meridian or parallel (These octets are only present for quasi-regular grids as described in notes 2 and 3)
+	// TODO: 73-nn: List of number of points along each meridian or parallel (These octets are only present for quasi-regular grids as described in note 4)
 }
 
 // https://codes.ecmwf.int/grib/format/grib2/templates/3/40/
