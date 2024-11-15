@@ -1,8 +1,6 @@
 package gdt
 
-import (
-	"math"
-)
+import "math"
 
 // GetRegularGGGridIndex calculates the index position of a given latitude and longitude in a Gaussian grid.
 // This function uses an approximate algorithm to determine the indices.

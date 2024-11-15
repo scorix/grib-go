@@ -163,6 +163,7 @@ func TestMessageReader_ReadLL(t *testing.T) {
 
 			totalItemsCount++
 			if i != grd {
+				t.Logf("expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 				errorItemsCount++
 				continue
 			}
