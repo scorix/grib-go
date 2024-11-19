@@ -9,11 +9,11 @@ import (
 )
 
 type MessageIndex struct {
-	Offset       int64            `json:"offset"`
-	Size         int64            `json:"size"`
-	DataOffset   int64            `json:"data_offset"`
-	ScanningMode gdt.ScanningMode `json:"scanning_mode"`
-	Packing      drt.Template     `json:"packing"`
+	Offset         int64        `json:"offset"`
+	Size           int64        `json:"size"`
+	DataOffset     int64        `json:"data_offset"`
+	GridDefinition gdt.Template `json:"grid_definition"`
+	Packing        drt.Template `json:"packing"`
 }
 
 func (mi MessageIndex) MarshalJSON() ([]byte, error) {
@@ -21,32 +21,28 @@ func (mi MessageIndex) MarshalJSON() ([]byte, error) {
 		Template: mi.Packing,
 	}
 
-	sm := gdt.ScanningModeMarshaler{
-		Template: mi.ScanningMode,
-	}
-
 	return json.Marshal(struct {
-		Offset       int64                     `json:"offset"`
-		Size         int64                     `json:"size"`
-		DataOffset   int64                     `json:"data_offset"`
-		ScanningMode gdt.ScanningModeMarshaler `json:"scanning_mode"`
-		Packing      drt.TemplateMarshaler     `json:"packing"`
+		Offset         int64                 `json:"offset"`
+		Size           int64                 `json:"size"`
+		DataOffset     int64                 `json:"data_offset"`
+		GridDefinition gdt.Template          `json:"grid_definition"`
+		Packing        drt.TemplateMarshaler `json:"packing"`
 	}{
-		Offset:       mi.Offset,
-		Size:         mi.Size,
-		DataOffset:   mi.DataOffset,
-		ScanningMode: sm,
-		Packing:      tm,
+		Offset:         mi.Offset,
+		Size:           mi.Size,
+		DataOffset:     mi.DataOffset,
+		GridDefinition: mi.GridDefinition,
+		Packing:        tm,
 	})
 }
 
 func (mi *MessageIndex) UnmarshalJSON(data []byte) error {
 	var temp struct {
-		Offset       int64                     `json:"offset"`
-		Size         int64                     `json:"size"`
-		DataOffset   int64                     `json:"data_offset"`
-		ScanningMode gdt.ScanningModeMarshaler `json:"scanning_mode"`
-		Packing      drt.TemplateMarshaler     `json:"packing"`
+		Offset         int64                 `json:"offset"`
+		Size           int64                 `json:"size"`
+		DataOffset     int64                 `json:"data_offset"`
+		GridDefinition json.RawMessage       `json:"grid_definition"`
+		Packing        drt.TemplateMarshaler `json:"packing"`
 	}
 
 	if err := json.Unmarshal(data, &temp); err != nil {
@@ -57,7 +53,12 @@ func (mi *MessageIndex) UnmarshalJSON(data []byte) error {
 	mi.Size = temp.Size
 	mi.DataOffset = temp.DataOffset
 	mi.Packing = temp.Packing.Template
-	mi.ScanningMode = temp.ScanningMode.Template
+
+	tpl, err := gdt.UnMarshalJSONTemplate(temp.GridDefinition)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal grid definition: %w, data: %s", err, temp.GridDefinition)
+	}
+	mi.GridDefinition = tpl
 
 	return nil
 }

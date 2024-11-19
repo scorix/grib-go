@@ -1,16 +1,16 @@
 module github.com/scorix/grib-go
 
-go 1.23.0
+go 1.23.2
 
-toolchain go1.23.1
+toolchain go1.23.3
 
 require (
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/scorix/aliyun-oss-io v0.3.3
 	github.com/scorix/go-eccodes v0.1.5
+	github.com/scorix/walg v0.1.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
-	golang.org/x/sync v0.9.0
 )
 
 require (

@@ -20,14 +20,14 @@ type Message interface {
 	GetProductDefinitionTemplateNumber() int
 	GetDataRepresentationTemplateNumber() int
 	GetDataRepresentationTemplate() drt.Template
-	GetScanningMode() (gdt.ScanningMode, error)
+	GetGridDefinitionTemplate() gdt.Template
 
 	ReadData() ([]float32, error)
 	Image() (image.Image, error)
 	Step() int
 
-	GetGridPointLL(i, j int) (float32, float32, error)
-	GetGridPointFromLL(lat float32, lon float32) (i, j, n int, err error)
+	GetGridPointLL(n int) (float32, float32)
+	GetGridPointFromLL(lat float32, lon float32) int
 	GetNi() int
 	GetNj() int
 	GetSize() int64
@@ -149,26 +149,14 @@ func (m *message) GetDataRepresentationTemplate() drt.Template {
 	return m.sec5.DataRepresentationTemplate
 }
 
-func (m *message) GetGridPointLL(i, j int) (float32, float32, error) {
-	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
-	if err != nil {
-		return 0, 0, fmt.Errorf("get scanning mode: %w", err)
-	}
-
-	lat, lng := sm.GetGridPointLL(i, j)
-
-	return lat, lng, nil
+func (m *message) GetGridPointLL(n int) (float32, float32) {
+	tpl := m.sec3.GetGridDefinitionTemplate()
+	return tpl.GetGridPoint(n)
 }
 
-func (m *message) GetGridPointFromLL(lat float32, lon float32) (int, int, int, error) {
-	sm, err := m.sec3.GetGridDefinitionTemplate().GetScanningMode()
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("get scanning mode: %w", err)
-	}
-
-	i, j, n := sm.GetGridPointFromLL(lat, lon)
-
-	return i, j, n, nil
+func (m *message) GetGridPointFromLL(lat float32, lon float32) int {
+	tpl := m.sec3.GetGridDefinitionTemplate()
+	return tpl.GetGridIndex(lat, lon)
 }
 
 func (m *message) GetNi() int {
@@ -191,8 +179,8 @@ func (m *message) GetSize() int64 {
 	return int64(m.sec0.GribLength)
 }
 
-func (m *message) GetScanningMode() (gdt.ScanningMode, error) {
-	return m.sec3.GridDefinitionTemplate.GetScanningMode()
+func (m *message) GetGridDefinitionTemplate() gdt.Template {
+	return m.sec3.GridDefinitionTemplate
 }
 
 func (m *message) assignSection(sec Section) error {
@@ -222,17 +210,12 @@ func (m *message) assignSection(sec Section) error {
 }
 
 func (m *message) DumpMessageIndex() (*MessageIndex, error) {
-	sm, err := m.GetScanningMode()
-	if err != nil {
-		return nil, fmt.Errorf("get scanning mode: %w", err)
-	}
-
 	return &MessageIndex{
-		Offset:       m.offset,
-		Size:         m.GetSize(),
-		DataOffset:   m.GetDataOffset(),
-		ScanningMode: sm,
-		Packing:      m.GetDataRepresentationTemplate(),
+		Offset:         m.offset,
+		Size:           m.GetSize(),
+		DataOffset:     m.GetDataOffset(),
+		GridDefinition: m.GetGridDefinitionTemplate(),
+		Packing:        m.GetDataRepresentationTemplate(),
 	}, nil
 }
 
@@ -257,7 +240,7 @@ type MessageReader interface {
 type simplePackingMessageReader struct {
 	sp  *gridpoint.SimplePacking
 	spr *gridpoint.SimplePackingReader
-	sm  gdt.ScanningMode
+	gdt gdt.Template
 }
 
 func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage) (MessageReader, error) {
@@ -266,19 +249,16 @@ func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage) (
 		return nil, fmt.Errorf("unsupported data representation template: %T", m.GetDataRepresentationTemplate())
 	}
 
-	sm, err := m.GetScanningMode()
-	if err != nil {
-		return nil, fmt.Errorf("get scanning mode: %w", err)
-	}
+	gdt := m.GetGridDefinitionTemplate()
 
-	return NewSimplePackingMessageReader(r, m.GetOffset(), m.GetSize(), m.GetDataOffset(), sp, sm)
+	return NewSimplePackingMessageReader(r, m.GetOffset(), m.GetSize(), m.GetDataOffset(), sp, gdt)
 }
 
-func NewSimplePackingMessageReader(r io.ReaderAt, messageOffset int64, messageSize int64, dataOffset int64, sp *gridpoint.SimplePacking, sm gdt.ScanningMode) (MessageReader, error) {
+func NewSimplePackingMessageReader(r io.ReaderAt, messageOffset int64, messageSize int64, dataOffset int64, sp *gridpoint.SimplePacking, gdt gdt.Template) (MessageReader, error) {
 	return &simplePackingMessageReader{
 		spr: gridpoint.NewSimplePackingReader(r, dataOffset, messageOffset+messageSize, sp),
 		sp:  sp,
-		sm:  sm,
+		gdt: gdt,
 	}, nil
 }
 
@@ -288,12 +268,12 @@ func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageInd
 		return nil, fmt.Errorf("unsupported packing: %T", mi.Packing)
 	}
 
-	return NewSimplePackingMessageReader(r, mi.Offset, mi.Size, mi.DataOffset, sp, mi.ScanningMode)
+	return NewSimplePackingMessageReader(r, mi.Offset, mi.Size, mi.DataOffset, sp, mi.GridDefinition)
 }
 
 func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float32, error) {
-	i, j, grid := r.sm.GetGridPointFromLL(lat, lon)
-	lat, lng := r.sm.GetGridPointLL(i, j)
+	grid := r.gdt.GetGridIndex(lat, lon)
+	lat, lng := r.gdt.GetGridPoint(grid)
 
 	v, err := r.spr.ReadGridAt(grid)
 	if err != nil {

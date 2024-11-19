@@ -62,14 +62,15 @@ func TestMessageReader_ReadLL(t *testing.T) {
 		require.Equal(t, int64(2206439), msg.GetSize())
 		require.Equal(t, int64(0), msg.GetOffset())
 		require.Equal(t, int64(175), msg.GetDataOffset())
+		require.Equal(t, 1440, msg.GetNi())
+		require.Equal(t, 721, msg.GetNj())
 
 		mm, err := mmap.Open(f.Name())
 		require.NoError(t, err)
 
-		sm, err := msg.GetScanningMode()
-		require.NoError(t, err)
+		tpl := msg.GetGridDefinitionTemplate()
 
-		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetOffset(), msg.GetSize(), msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), sm)
+		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetOffset(), msg.GetSize(), msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), tpl)
 		require.NoError(t, err)
 
 		for i := 0; iter.HasNext(); i++ {
@@ -77,8 +78,7 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			lat32 := regulation.DegreedLatitudeLongitude(int(lat * 1e6))
 			lng32 := regulation.DegreedLatitudeLongitude(int(lng * 1e6))
 
-			_, _, grd, err := msg.GetGridPointFromLL(lat32, lng32)
-			require.NoError(t, err)
+			grd := msg.GetGridPointFromLL(lat32, lng32)
 			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
 			{
@@ -93,7 +93,6 @@ func TestMessageReader_ReadLL(t *testing.T) {
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
-
 		}
 	})
 
@@ -144,30 +143,18 @@ func TestMessageReader_ReadLL(t *testing.T) {
 		mm, err := mmap.Open(f.Name())
 		require.NoError(t, err)
 
-		sm, err := msg.GetScanningMode()
-		require.NoError(t, err)
+		tpl := msg.GetGridDefinitionTemplate()
 
-		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetOffset(), msg.GetSize(), msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), sm)
+		reader, err := grib2.NewSimplePackingMessageReader(mm, msg.GetOffset(), msg.GetSize(), msg.GetDataOffset(), msg.GetDataRepresentationTemplate().(*gridpoint.SimplePacking), tpl)
 		require.NoError(t, err)
-
-		errorItemsCount := 0
-		totalItemsCount := 0
 
 		for i := 0; iter.HasNext(); i++ {
 			lat, lng, val, _ := iter.Next()
 			lat32 := regulation.DegreedLatitudeLongitude(int(lat * 1e6))
 			lng32 := regulation.DegreedLatitudeLongitude(int(lng * 1e6))
 
-			_, _, grd, err := msg.GetGridPointFromLL(lat32, lng32)
-			require.NoError(t, err)
+			grd := msg.GetGridPointFromLL(lat32, lng32)
 			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
-
-			totalItemsCount++
-			if i != grd {
-				// t.Logf("expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
-				errorItemsCount++
-				continue
-			}
 
 			{
 				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
@@ -182,10 +169,6 @@ func TestMessageReader_ReadLL(t *testing.T) {
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 		}
-
-		errorRate := float64(errorItemsCount) / float64(totalItemsCount)
-		t.Logf("error rate: %f, total items: %d, error items: %d", errorRate, totalItemsCount, errorItemsCount)
-		require.Less(t, errorRate, 0.01)
 	})
 }
 
@@ -223,17 +206,21 @@ func TestMessage_DumpMessageIndex(t *testing.T) {
 				Offset:     0,
 				Size:       2206439,
 				DataOffset: 175,
-				ScanningMode: gdt.ScanningMode(&gdt.ScanningMode0000{
-					Ni:                          1440,
-					Nj:                          721,
-					LatitudeOfFirstGridPoint:    90000000,
-					LongitudeOfFirstGridPoint:   0,
-					ResolutionAndComponentFlags: 48,
-					LatitudeOfLastGridPoint:     -90000000,
-					LongitudeOfLastGridPoint:    359750000,
-					IDirectionIncrement:         250000,
-					JDirectionIncrement:         250000,
-				}),
+				GridDefinition: &gdt.Template0{
+					Template0FixedPart: gdt.Template0FixedPart{
+						ShapeOfTheEarth:             6,
+						Ni:                          1440,
+						Nj:                          721,
+						LatitudeOfFirstGridPoint:    90000000,
+						LongitudeOfFirstGridPoint:   0,
+						ResolutionAndComponentFlags: 48,
+						LatitudeOfLastGridPoint:     -90000000,
+						LongitudeOfLastGridPoint:    359750000,
+						IDirectionIncrement:         250000,
+						JDirectionIncrement:         250000,
+						SubdivisionsOfBasicAngle:    -1,
+					},
+				},
 				Packing: &gridpoint.SimplePacking{
 					ReferenceValue:     7.728597,
 					BinaryScaleFactor:  -4,

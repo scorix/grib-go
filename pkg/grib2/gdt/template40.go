@@ -1,9 +1,9 @@
 package gdt
 
 import (
-	"fmt"
-
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
+	"github.com/scorix/walg/pkg/geo/grids"
+	"github.com/scorix/walg/pkg/geo/grids/gaussian"
 )
 
 /*
@@ -20,8 +20,9 @@ Notes:
 */
 
 type Template40 struct {
-	Template40FixedPart
+	Template40FixedPart `json:"template40"`
 	// TODO: 73-nn: List of number of points along each meridian or parallel (These octets are only present for quasi-regular grids as described in note 4)
+	grids grids.Grid `json:"-"`
 }
 
 // https://codes.ecmwf.int/grib/format/grib2/templates/3/40/
@@ -47,8 +48,8 @@ type template40FixedPart struct {
 	ScanningMode                           uint8
 }
 
-func (t template40FixedPart) Export() Template40FixedPart {
-	return Template40FixedPart{
+func (t template40FixedPart) Export() Template {
+	t40 := Template40FixedPart{
 		ShapeOfTheEarth:                        regulation.ToInt8(t.ShapeOfTheEarth),
 		ScaleFactorOfRadiusOfSphericalEarth:    regulation.ToInt8(t.ScaleFactorOfRadiusOfSphericalEarth),
 		ScaledValueOfRadiusOfSphericalEarth:    regulation.ToInt32(t.ScaledValueOfRadiusOfSphericalEarth),
@@ -69,51 +70,40 @@ func (t template40FixedPart) Export() Template40FixedPart {
 		N:                                      regulation.ToInt32(t.N),
 		ScanningMode:                           regulation.ToInt8(t.ScanningMode),
 	}
+
+	return t40.AsTemplate()
 }
 
 type Template40FixedPart struct {
-	ShapeOfTheEarth                        int8
-	ScaleFactorOfRadiusOfSphericalEarth    int8
-	ScaledValueOfRadiusOfSphericalEarth    int32
-	ScaleFactorOfEarthMajorAxis            int8
-	ScaledValueOfEarthMajorAxis            int32
-	ScaleFactorOfEarthMinorAxis            int8
-	ScaledValueOfEarthMinorAxis            int32
-	Ni                                     int32
-	Nj                                     int32
-	BasicAngleOfTheInitialProductionDomain int32
-	SubdivisionsOfBasicAngle               int32
-	LatitudeOfFirstGridPoint               int32
-	LongitudeOfFirstGridPoint              int32
-	ResolutionAndComponentFlags            int8
-	LatitudeOfLastGridPoint                int32
-	LongitudeOfLastGridPoint               int32
-	IDirectionIncrement                    int32
-	N                                      int32
-	ScanningMode                           int8
+	ShapeOfTheEarth                        int8  `json:"-"`
+	ScaleFactorOfRadiusOfSphericalEarth    int8  `json:"-"`
+	ScaledValueOfRadiusOfSphericalEarth    int32 `json:"-"`
+	ScaleFactorOfEarthMajorAxis            int8  `json:"-"`
+	ScaledValueOfEarthMajorAxis            int32 `json:"-"`
+	ScaleFactorOfEarthMinorAxis            int8  `json:"-"`
+	ScaledValueOfEarthMinorAxis            int32 `json:"-"`
+	Ni                                     int32 `json:"-"`
+	Nj                                     int32 `json:"-"`
+	BasicAngleOfTheInitialProductionDomain int32 `json:"-"`
+	SubdivisionsOfBasicAngle               int32 `json:"-"`
+	LatitudeOfFirstGridPoint               int32 `json:"-"`
+	LongitudeOfFirstGridPoint              int32 `json:"-"`
+	ResolutionAndComponentFlags            int8  `json:"-"`
+	LatitudeOfLastGridPoint                int32 `json:"-"`
+	LongitudeOfLastGridPoint               int32 `json:"-"`
+	IDirectionIncrement                    int32 `json:"-"`
+	N                                      int32 `json:"n"`
+	ScanningMode                           int8  `json:"scanningMode"`
 }
 
-func (t *Template40FixedPart) GetScanningMode() (ScanningMode, error) {
-	switch t.ScanningMode {
-	case 0:
-		sm := ScanningMode0000{
-			Ni:                          t.Ni,
-			Nj:                          t.Nj,
-			LatitudeOfFirstGridPoint:    t.LatitudeOfFirstGridPoint,
-			LongitudeOfFirstGridPoint:   t.LongitudeOfFirstGridPoint,
-			ResolutionAndComponentFlags: t.ResolutionAndComponentFlags,
-			LatitudeOfLastGridPoint:     t.LatitudeOfLastGridPoint,
-			LongitudeOfLastGridPoint:    t.LongitudeOfLastGridPoint,
-			IDirectionIncrement:         t.IDirectionIncrement,
-			N:                           t.N,
-			getGridIndexFunc:            t.GetGridIndex,
-			getGridPointByIndexFunc:     t.GetGridPointByIndex,
-		}
-
-		return &sm, nil
+func (t *Template40FixedPart) AsTemplate() Template {
+	return &Template40{
+		Template40FixedPart: *t,
+		grids: gaussian.NewRegular(
+			int(t.N),
+			gaussian.WithScanMode(grids.ScanMode(t.ScanningMode)),
+		),
 	}
-
-	return nil, fmt.Errorf("scanning mode %04b is not implemented", t.ScanningMode)
 }
 
 func (t *Template40FixedPart) GetNi() int32 {
@@ -124,10 +114,11 @@ func (t *Template40FixedPart) GetNj() int32 {
 	return t.Nj
 }
 
-func (t *Template40FixedPart) GetGridIndex(lat, lon float32) (i, j, n int) {
-	return GetRegularGGGridIndex(lat, lon, t.LatitudeOfFirstGridPoint, t.LongitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.LongitudeOfLastGridPoint, t.N, t.Ni)
+func (t *Template40) GetGridIndex(lat, lon float32) (n int) {
+	return grids.GridIndex(t.grids, float64(lat), float64(lon))
 }
 
-func (t *Template40FixedPart) GetGridPointByIndex(i, j int) (lat, lon float32) {
-	return GetRegularGGGridPointByIndex(i, j, t.LatitudeOfFirstGridPoint, t.LongitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.LongitudeOfLastGridPoint, t.N, t.Ni)
+func (t *Template40) GetGridPoint(n int) (float32, float32) {
+	lat, lon := grids.GridPoint(t.grids, n)
+	return float32(lat), float32(lon)
 }
