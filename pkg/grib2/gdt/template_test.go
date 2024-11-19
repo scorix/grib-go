@@ -9,17 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestScanningModeJSON(t *testing.T) {
+func TestTemplateJSON(t *testing.T) {
 	tests := []struct {
 		name    string
-		input   gdt.ScanningModeMarshaler
+		input   gdt.Template
 		want    string
 		wantErr bool
 	}{
 		{
-			name: "marshal scanning mode 0000",
-			input: gdt.ScanningModeMarshaler{
-				Template: &gdt.ScanningMode0000{
+			name: "marshal template 0",
+			input: &gdt.Template0{
+				Template0FixedPart: gdt.Template0FixedPart{
 					Ni:                          360,
 					Nj:                          181,
 					LatitudeOfFirstGridPoint:    90000000,
@@ -31,7 +31,18 @@ func TestScanningModeJSON(t *testing.T) {
 					JDirectionIncrement:         1000000,
 				},
 			},
-			want:    `{"mode":0,"content":{"ni":360,"nj":181,"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":48,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359000000,"iDirectionIncrement":1000000,"jDirectionIncrement":1000000}}`,
+			want:    `{"template0":{"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359000000,"iDirectionIncrement":1000000,"jDirectionIncrement":1000000,"scanningMode":0}}`,
+			wantErr: false,
+		},
+		{
+			name: "marshal template 40",
+			input: &gdt.Template40{
+				Template40FixedPart: gdt.Template40FixedPart{
+					N:            768,
+					ScanningMode: 0,
+				},
+			},
+			want:    `{"template40":{"n":768,"scanningMode":0}}`,
 			wantErr: false,
 		},
 	}
@@ -49,27 +60,35 @@ func TestScanningModeJSON(t *testing.T) {
 	}
 }
 
-func TestScanningMode0000_UnmarshalJSON(t *testing.T) {
+func TestTemplate0_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    gdt.ScanningModeMarshaler
+		want    gdt.Template
 		wantErr bool
 	}{
 		{
-			name:  "unmarshal scanning mode 0000",
-			input: `{"mode":0,"content":{"ni":360,"nj":181,"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":48,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359000000,"iDirectionIncrement":1000000,"jDirectionIncrement":1000000}}`,
-			want: gdt.ScanningModeMarshaler{
-				Template: &gdt.ScanningMode0000{
-					Ni:                          360,
-					Nj:                          181,
-					LatitudeOfFirstGridPoint:    90000000,
-					LongitudeOfFirstGridPoint:   0,
-					ResolutionAndComponentFlags: 48,
-					LatitudeOfLastGridPoint:     -90000000,
-					LongitudeOfLastGridPoint:    359000000,
-					IDirectionIncrement:         1000000,
-					JDirectionIncrement:         1000000,
+			name:  "unmarshal template 0",
+			input: `{"template0":{"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359000000,"iDirectionIncrement":1000000,"jDirectionIncrement":1000000,"scanningMode":0}}`,
+			want: &gdt.Template0{
+				Template0FixedPart: gdt.Template0FixedPart{
+					LatitudeOfFirstGridPoint:  90000000,
+					LongitudeOfFirstGridPoint: 0,
+					LatitudeOfLastGridPoint:   -90000000,
+					LongitudeOfLastGridPoint:  359000000,
+					IDirectionIncrement:       1000000,
+					JDirectionIncrement:       1000000,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:  "unmarshal template 40",
+			input: `{"template40":{"n":768,"scanningMode":0}}`,
+			want: &gdt.Template40{
+				Template40FixedPart: gdt.Template40FixedPart{
+					N:            768,
+					ScanningMode: 0,
 				},
 			},
 			wantErr: false,
@@ -78,13 +97,12 @@ func TestScanningMode0000_UnmarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got gdt.ScanningModeMarshaler
-			err := json.Unmarshal([]byte(tt.input), &got)
+			got, err := gdt.UnMarshalJSONTemplate([]byte(tt.input))
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.want, got)
+				assert.EqualExportedValues(t, tt.want, got)
 			}
 		})
 	}

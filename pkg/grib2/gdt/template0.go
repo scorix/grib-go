@@ -1,9 +1,11 @@
 package gdt
 
 import (
-	"fmt"
+	"math"
 
 	"github.com/scorix/grib-go/pkg/grib2/regulation"
+	"github.com/scorix/walg/pkg/geo/grids"
+	"github.com/scorix/walg/pkg/geo/grids/latlon"
 )
 
 /*
@@ -22,8 +24,9 @@ Notes:
 in the grid. However, this may not be true if bit 8 of the scanning mode flags (octet 72) is set to 1.
 */
 type Template0 struct {
-	Template0FixedPart
+	Template0FixedPart `json:"template0"`
 	// TODO: 73-nn: List of number of points along each meridian or parallel (These octets are only present for quasi-regular grids as described in notes 2 and 3)
+	grids grids.Grid `json:"-"`
 }
 
 type template0FixedPart struct {
@@ -48,8 +51,8 @@ type template0FixedPart struct {
 	ScanningMode                           uint8
 }
 
-func (t template0FixedPart) Export() Template0FixedPart {
-	return Template0FixedPart{
+func (t template0FixedPart) Export() Template {
+	t0 := Template0FixedPart{
 		ShapeOfTheEarth:                        regulation.ToInt8(t.ShapeOfTheEarth),
 		ScaleFactorOfRadiusOfSphericalEarth:    regulation.ToInt8(t.ScaleFactorOfRadiusOfSphericalEarth),
 		ScaledValueOfRadiusOfSphericalEarth:    regulation.ToInt32(t.ScaledValueOfRadiusOfSphericalEarth),
@@ -70,51 +73,54 @@ func (t template0FixedPart) Export() Template0FixedPart {
 		JDirectionIncrement:                    regulation.ToInt32(t.JDirectionIncrement),
 		ScanningMode:                           regulation.ToInt8(t.ScanningMode),
 	}
+
+	return t0.AsTemplate()
 }
 
 type Template0FixedPart struct {
-	ShapeOfTheEarth                        int8
-	ScaleFactorOfRadiusOfSphericalEarth    int8
-	ScaledValueOfRadiusOfSphericalEarth    int32
-	ScaleFactorOfEarthMajorAxis            int8
-	ScaledValueOfEarthMajorAxis            int32
-	ScaleFactorOfEarthMinorAxis            int8
-	ScaledValueOfEarthMinorAxis            int32
-	Ni                                     int32
-	Nj                                     int32
-	BasicAngleOfTheInitialProductionDomain int32
-	SubdivisionsOfBasicAngle               int32
-	LatitudeOfFirstGridPoint               int32
-	LongitudeOfFirstGridPoint              int32
-	ResolutionAndComponentFlags            int8
-	LatitudeOfLastGridPoint                int32
-	LongitudeOfLastGridPoint               int32
-	IDirectionIncrement                    int32
-	JDirectionIncrement                    int32
-	ScanningMode                           int8
+	ShapeOfTheEarth                        int8  `json:"-"`
+	ScaleFactorOfRadiusOfSphericalEarth    int8  `json:"-"`
+	ScaledValueOfRadiusOfSphericalEarth    int32 `json:"-"`
+	ScaleFactorOfEarthMajorAxis            int8  `json:"-"`
+	ScaledValueOfEarthMajorAxis            int32 `json:"-"`
+	ScaleFactorOfEarthMinorAxis            int8  `json:"-"`
+	ScaledValueOfEarthMinorAxis            int32 `json:"-"`
+	Ni                                     int32 `json:"-"`
+	Nj                                     int32 `json:"-"`
+	BasicAngleOfTheInitialProductionDomain int32 `json:"-"`
+	SubdivisionsOfBasicAngle               int32 `json:"-"`
+	LatitudeOfFirstGridPoint               int32 `json:"latitudeOfFirstGridPoint"`
+	LongitudeOfFirstGridPoint              int32 `json:"longitudeOfFirstGridPoint"`
+	ResolutionAndComponentFlags            int8  `json:"-"`
+	LatitudeOfLastGridPoint                int32 `json:"latitudeOfLastGridPoint"`
+	LongitudeOfLastGridPoint               int32 `json:"longitudeOfLastGridPoint"`
+	IDirectionIncrement                    int32 `json:"iDirectionIncrement"`
+	JDirectionIncrement                    int32 `json:"jDirectionIncrement"`
+	ScanningMode                           int8  `json:"scanningMode"`
 }
 
-func (t *Template0FixedPart) GetScanningMode() (ScanningMode, error) {
-	switch t.ScanningMode {
-	case 0:
-		sm := ScanningMode0000{
-			Ni:                          t.Ni,
-			Nj:                          t.Nj,
-			LatitudeOfFirstGridPoint:    t.LatitudeOfFirstGridPoint,
-			LongitudeOfFirstGridPoint:   t.LongitudeOfFirstGridPoint,
-			ResolutionAndComponentFlags: t.ResolutionAndComponentFlags,
-			LatitudeOfLastGridPoint:     t.LatitudeOfLastGridPoint,
-			LongitudeOfLastGridPoint:    t.LongitudeOfLastGridPoint,
-			IDirectionIncrement:         t.IDirectionIncrement,
-			JDirectionIncrement:         t.JDirectionIncrement,
-			getGridIndexFunc:            t.GetGridIndex,
-			getGridPointByIndexFunc:     t.GetGridPointLL,
-		}
+func (t *Template0FixedPart) AsTemplate() Template {
+	firstLat := float64(t.LatitudeOfFirstGridPoint) / 1e6
+	lastLat := float64(t.LatitudeOfLastGridPoint) / 1e6
+	firstLon := float64(t.LongitudeOfFirstGridPoint) / 1e6
+	lastLon := float64(t.LongitudeOfLastGridPoint) / 1e6
+	minLat := math.Min(firstLat, lastLat)
+	maxLat := math.Max(firstLat, lastLat)
+	minLon := math.Min(firstLon, lastLon)
+	maxLon := math.Max(firstLon, lastLon)
 
-		return &sm, nil
+	return &Template0{
+		Template0FixedPart: *t,
+		grids: latlon.NewLatLonGrid(
+			minLat,
+			maxLat,
+			minLon,
+			maxLon,
+			float64(t.IDirectionIncrement)/1e6,
+			float64(t.JDirectionIncrement)/1e6,
+			latlon.WithScanMode(grids.ScanMode(t.ScanningMode)),
+		),
 	}
-
-	return nil, fmt.Errorf("scanning mode %04b is not implemented", t.ScanningMode)
 }
 
 func (t *Template0FixedPart) GetNi() int32 {
@@ -125,10 +131,11 @@ func (t *Template0FixedPart) GetNj() int32 {
 	return t.Nj
 }
 
-func (t *Template0FixedPart) GetGridIndex(lat, lon float32) (i, j, n int) {
-	return GetRegularLLGridIndex(lat, lon, t.LatitudeOfFirstGridPoint, t.LongitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.LongitudeOfLastGridPoint, t.IDirectionIncrement, t.JDirectionIncrement)
+func (t *Template0) GetGridIndex(lat, lon float32) (n int) {
+	return grids.GridIndex(t.grids, float64(lat), float64(lon))
 }
 
-func (t *Template0FixedPart) GetGridPointLL(i, j int) (lat, lon float32) {
-	return GetRegularLLGridPointByIndex(i, j, t.LatitudeOfFirstGridPoint, t.LongitudeOfFirstGridPoint, t.LatitudeOfLastGridPoint, t.LongitudeOfLastGridPoint, t.IDirectionIncrement, t.JDirectionIncrement)
+func (t *Template0) GetGridPoint(n int) (float32, float32) {
+	lat, lon := grids.GridPoint(t.grids, n)
+	return float32(lat), float32(lon)
 }

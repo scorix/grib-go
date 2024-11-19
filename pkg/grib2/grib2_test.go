@@ -57,7 +57,7 @@ func assertSection3(t testing.TB, sec grib.Section, template gdt.Template) {
 	require.Implements(t, (*grib2.Section3)(nil), sec)
 
 	sec3 := sec.(grib2.Section3)
-	assert.Equal(t, template, sec3.GetGridDefinitionTemplate())
+	assert.EqualExportedValues(t, template, sec3.GetGridDefinitionTemplate())
 }
 
 func assertSection4(t testing.TB, sec grib.Section, template pdt.Template) {
@@ -1281,14 +1281,11 @@ func TestGrib2_ReadMessages(t *testing.T) {
 
 		for i := 0; ; i++ {
 			msg, err := g.ReadMessageAt(offset)
-			if i < 743 && err != nil {
-				t.Fatal(err)
-			}
-
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			require.NoError(t, err)
+
+			require.NoError(t, err, "failed to read message at offset %d", offset)
 			require.NotNil(t, msg)
 
 			msgs = append(msgs, msg)

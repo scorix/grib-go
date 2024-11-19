@@ -27,10 +27,17 @@ func TestMessageIndex_MarshalJSON(t *testing.T) {
 				Offset:     100,
 				Size:       1000,
 				DataOffset: 200,
-				ScanningMode: gdt.ScanningMode(&gdt.ScanningMode0000{
-					Ni: 10,
-					Nj: 20,
-				}),
+				GridDefinition: &gdt.Template0{
+					Template0FixedPart: gdt.Template0FixedPart{
+						LatitudeOfFirstGridPoint:  90000000,
+						LongitudeOfFirstGridPoint: 0,
+						LatitudeOfLastGridPoint:   -90000000,
+						LongitudeOfLastGridPoint:  359750000,
+						IDirectionIncrement:       250000,
+						JDirectionIncrement:       250000,
+						ScanningMode:              1,
+					},
+				},
 				Packing: drt.Template(&gridpoint.SimplePacking{
 					ReferenceValue:     1.5,
 					BinaryScaleFactor:  2,
@@ -38,7 +45,7 @@ func TestMessageIndex_MarshalJSON(t *testing.T) {
 					Bits:               16,
 				}),
 			},
-			want: `{"offset":100,"size":1000,"data_offset":200,"scanning_mode":{"mode":0,"content":{"ni":10,"nj":20,"latitudeOfFirstGridPoint":0,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":0,"latitudeOfLastGridPoint":0,"longitudeOfLastGridPoint":0,"iDirectionIncrement":0,"jDirectionIncrement":0}},"packing":{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":0}}`,
+			want: `{"offset":100,"size":1000,"data_offset":200,"grid_definition":{"template0":{"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359750000,"iDirectionIncrement":250000,"jDirectionIncrement":250000,"scanningMode":1}},"packing":{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":0}}`,
 		},
 	}
 
@@ -69,15 +76,22 @@ func TestMessageIndex_UnmarshalJSON(t *testing.T) {
 	}{
 		{
 			name: "unmarshal simple packing",
-			json: `{"offset":100,"size":1000,"data_offset":200,"scanning_mode":{"mode":0,"content":{"ni":10,"nj":20,"latitudeOfFirstGridPoint":0,"longitudeOfFirstGridPoint":0,"resolutionAndComponentFlags":0,"latitudeOfLastGridPoint":0,"longitudeOfLastGridPoint":0,"iDirectionIncrement":0,"jDirectionIncrement":0}},"packing":{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":0}}`,
+			json: `{"offset":100,"size":1000,"data_offset":200,"grid_definition":{"template0":{"latitudeOfFirstGridPoint":90000000,"longitudeOfFirstGridPoint":0,"latitudeOfLastGridPoint":-90000000,"longitudeOfLastGridPoint":359750000,"iDirectionIncrement":250000,"jDirectionIncrement":250000,"scanningMode":1}},"packing":{"number":0,"content":{"r":1.5,"b":2,"d":3,"l":16,"t":0},"vals":0}}`,
 			want: grib2.MessageIndex{
 				Offset:     100,
 				Size:       1000,
 				DataOffset: 200,
-				ScanningMode: gdt.ScanningMode(&gdt.ScanningMode0000{
-					Ni: 10,
-					Nj: 20,
-				}),
+				GridDefinition: &gdt.Template0{
+					Template0FixedPart: gdt.Template0FixedPart{
+						LatitudeOfFirstGridPoint:  90000000,
+						LongitudeOfFirstGridPoint: 0,
+						LatitudeOfLastGridPoint:   -90000000,
+						LongitudeOfLastGridPoint:  359750000,
+						IDirectionIncrement:       250000,
+						JDirectionIncrement:       250000,
+						ScanningMode:              1,
+					},
+				},
 				Packing: drt.Template(&gridpoint.SimplePacking{
 					ReferenceValue:     1.5,
 					BinaryScaleFactor:  2,
@@ -99,7 +113,7 @@ func TestMessageIndex_UnmarshalJSON(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.want, got)
+				assert.EqualExportedValues(t, tt.want, got)
 			}
 		})
 	}
