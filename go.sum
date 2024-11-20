@@ -15,8 +15,8 @@ github.com/scorix/aliyun-oss-io v0.3.3 h1:xiun9v6XIvNCkiVAwlVzrbXRNenfJneWvfOE9e
 github.com/scorix/aliyun-oss-io v0.3.3/go.mod h1:A4UMOXpdFPvkGRghKNT4l6jD82Kx7I+z9fwF3nGYqUU=
 github.com/scorix/go-eccodes v0.1.5 h1:9J7fRAp0NtBXjSSPjkGOxFZ5Q2vjwamgq6oJXY90hss=
 github.com/scorix/go-eccodes v0.1.5/go.mod h1:z+mLm8dCG+FA+bMQjS3ENWMXE+JwJw6UBGCU+8eUKAk=
-github.com/scorix/walg v0.1.0 h1:lhIhX87zc0c6o8t2tMEvS65RChH7+Prx/Kgt8jEntAQ=
-github.com/scorix/walg v0.1.0/go.mod h1:B4s6BFS61pLOasXcMvP6bcU+sialCl5f1L07bno6j/g=
+github.com/scorix/walg v0.2.0 h1:icdDKLfZW17bCbsTd7pQ82leiIyMkjqgm+Qb+GGGQK8=
+github.com/scorix/walg v0.2.0/go.mod h1:B4s6BFS61pLOasXcMvP6bcU+sialCl5f1L07bno6j/g=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e h1:I88y4caeGeuDQxgdoFPUq097j7kNfw6uvuiNxUBfcBk=

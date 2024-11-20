@@ -244,3 +244,71 @@ func TestMessage_DumpMessageIndex(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkMessageReader_ReadLL(b *testing.B) {
+	/*
+		goos: darwin
+		goarch: arm64
+		pkg: github.com/scorix/grib-go/pkg/grib2
+		cpu: Apple M2
+		=== RUN   BenchmarkMessageReader_ReadLL
+		BenchmarkMessageReader_ReadLL
+		=== RUN   BenchmarkMessageReader_ReadLL/regular_ll
+		BenchmarkMessageReader_ReadLL/regular_ll
+		BenchmarkMessageReader_ReadLL/regular_ll-8               2477862               531.5 ns/op             3 B/op          1 allocs/op
+		=== RUN   BenchmarkMessageReader_ReadLL/regular_gg
+		BenchmarkMessageReader_ReadLL/regular_gg
+		BenchmarkMessageReader_ReadLL/regular_gg-8                832761              1437 ns/op               3 B/op          1 allocs/op
+		PASS
+	*/
+
+	b.Run("regular_ll", func(b *testing.B) {
+		const filename = "../testdata/hpbl.grib2.out"
+
+		mm, err := mmap.Open(filename)
+		require.NoError(b, err)
+		defer mm.Close()
+
+		g := grib.NewGrib2(mm)
+
+		msg, err := g.ReadMessageAt(0)
+		require.NoError(b, err)
+		require.NotNil(b, msg)
+
+		mi, err := msg.DumpMessageIndex()
+		require.NoError(b, err)
+
+		reader, err := grib2.NewSimplePackingMessageReaderFromMessageIndex(mm, mi)
+		require.NoError(b, err)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			reader.ReadLL(-90, 0)
+		}
+	})
+
+	b.Run("regular_gg", func(b *testing.B) {
+		const filename = "../testdata/regular_gg.grib2.out"
+
+		mm, err := mmap.Open(filename)
+		require.NoError(b, err)
+		defer mm.Close()
+
+		g := grib.NewGrib2(mm)
+
+		msg, err := g.ReadMessageAt(0)
+		require.NoError(b, err)
+		require.NotNil(b, msg)
+
+		mi, err := msg.DumpMessageIndex()
+		require.NoError(b, err)
+
+		reader, err := grib2.NewSimplePackingMessageReaderFromMessageIndex(mm, mi)
+		require.NoError(b, err)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			reader.ReadLL(-90, 0)
+		}
+	})
+}
