@@ -115,7 +115,7 @@ func (t *Template40FixedPart) GetNj() int32 {
 }
 
 func (t *Template40) GetGridIndex(lat, lon float32) (n int) {
-	return grids.GridIndex(t.grids, float64(lat), float64(lon))
+	return grids.GuessGridIndex(t.grids, float64(lat), float64(lon))
 }
 
 func (t *Template40) GetGridPoint(n int) (float32, float32) {
