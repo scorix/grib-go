@@ -312,3 +312,37 @@ func BenchmarkMessageReader_ReadLL(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkReadMessageAt(b *testing.B) {
+	b.Run("regular_ll", func(b *testing.B) {
+		const filename = "../testdata/hpbl.grib2.out"
+
+		mm, err := mmap.Open(filename)
+		require.NoError(b, err)
+		defer mm.Close()
+
+		g := grib.NewGrib2(mm)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := g.ReadMessageAt(0)
+			require.NoError(b, err)
+		}
+	})
+
+	b.Run("regular_gg", func(b *testing.B) {
+		const filename = "../testdata/regular_gg.grib2.out"
+
+		mm, err := mmap.Open(filename)
+		require.NoError(b, err)
+		defer mm.Close()
+
+		g := grib.NewGrib2(mm)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := g.ReadMessageAt(0)
+			require.NoError(b, err)
+		}
+	})
+}

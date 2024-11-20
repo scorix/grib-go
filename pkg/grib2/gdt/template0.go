@@ -118,7 +118,6 @@ func (t *Template0FixedPart) AsTemplate() Template {
 			maxLon,
 			float64(t.IDirectionIncrement)/1e6,
 			float64(t.JDirectionIncrement)/1e6,
-			latlon.WithScanMode(grids.ScanMode(t.ScanningMode)),
 		),
 	}
 }
@@ -132,10 +131,10 @@ func (t *Template0FixedPart) GetNj() int32 {
 }
 
 func (t *Template0) GetGridIndex(lat, lon float32) (n int) {
-	return grids.GuessGridIndex(t.grids, float64(lat), float64(lon))
+	return grids.GuessGridIndex(t.grids, float64(lat), float64(lon), grids.ScanMode(t.ScanningMode))
 }
 
 func (t *Template0) GetGridPoint(n int) (float32, float32) {
-	lat, lon := grids.GridPoint(t.grids, n)
+	lat, lon := grids.GridPoint(t.grids, n, grids.ScanMode(t.ScanningMode))
 	return float32(lat), float32(lon)
 }
