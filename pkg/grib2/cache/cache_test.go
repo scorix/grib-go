@@ -1,6 +1,7 @@
 package cache_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/scorix/grib-go/pkg/grib2/cache"
@@ -13,7 +14,7 @@ type mockGridDataSource struct {
 	readCount int
 }
 
-func (m *mockGridDataSource) ReadGridAt(grid int) (float32, error) {
+func (m *mockGridDataSource) ReadGridAt(ctx context.Context, grid int) (float32, error) {
 	m.readCount++
 	return m.gridValue, nil
 }
@@ -23,13 +24,13 @@ func TestNoCache(t *testing.T) {
 	nc := cache.NewNoCache(ds)
 
 	// first read should be from source
-	v, err := nc.ReadGridAt(1, 1, 1)
+	v, err := nc.ReadGridAt(context.TODO(), 1, 1, 1)
 	require.NoError(t, err)
 	assert.Equal(t, float32(100), v)
 	assert.Equal(t, 1, ds.readCount)
 
 	// second read should not be cached
-	v, err = nc.ReadGridAt(1, 1, 1)
+	v, err = nc.ReadGridAt(context.TODO(), 1, 1, 1)
 	require.NoError(t, err)
 	assert.Equal(t, float32(100), v)
 	assert.Equal(t, 2, ds.readCount)

@@ -1,6 +1,7 @@
 package gridpoint
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -100,7 +101,7 @@ func NewSimplePackingReader(r io.ReaderAt, start, end int64, sp *SimplePacking) 
 	}
 }
 
-func (r *SimplePackingReader) ReadGridAt(n int) (float32, error) {
+func (r *SimplePackingReader) ReadGridAt(ctx context.Context, n int) (float32, error) {
 	if n >= r.sp.NumVals {
 		return 0, fmt.Errorf("requesting[%d] is out of range, total number of values is %d", n, r.sp.NumVals)
 	}

@@ -2,6 +2,7 @@ package gridpoint_test
 
 import (
 	"bytes"
+	"context"
 	"math"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestSimpleScaleReader(t *testing.T) {
 	t.Logf("simple packing: %+v", sp)
 
 	r := gridpoint.NewSimplePackingReader(bf, 0, 5, sp)
-	f, err := r.ReadGridAt(2)
+	f, err := r.ReadGridAt(context.TODO(), 2)
 	require.NoError(t, err)
 	assert.InDelta(t, float32(2.9611706734e+02), f, 1e-5)
 }
