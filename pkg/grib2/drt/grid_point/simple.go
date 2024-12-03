@@ -84,26 +84,26 @@ func (sp *SimplePacking) Definition() any {
 }
 
 type SimplePackingReader struct {
-	r      io.ReaderAt
-	sp     *SimplePacking
-	sf     func(uint32) float32
-	offset int64
-	length int64
+	r  io.ReaderAt
+	sp *SimplePacking
+	sf func(uint32) float32
 }
 
 func NewSimplePackingReader(r io.ReaderAt, start, end int64, sp *SimplePacking) *SimplePackingReader {
 	return &SimplePackingReader{
-		r:      r,
-		sp:     sp,
-		sf:     sp.ScaleFunc(),
-		offset: start,
-		length: end - start,
+		r:  io.NewSectionReader(r, start, end-start),
+		sp: sp,
+		sf: sp.ScaleFunc(),
 	}
 }
 
 func (r *SimplePackingReader) ReadGridAt(ctx context.Context, n int) (float32, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
 	if n >= r.sp.NumVals {
-		return 0, fmt.Errorf("requesting[%d] is out of range, total number of values is %d", n, r.sp.NumVals)
+		return 0, fmt.Errorf("grid point %d is out of range[0-%d]", n, r.sp.NumVals)
 	}
 
 	bitsOffset := n * int(r.sp.Bits)
@@ -111,8 +111,8 @@ func (r *SimplePackingReader) ReadGridAt(ctx context.Context, n int) (float32, e
 	needBytes := int(math.Ceil(float64(int(r.sp.Bits)+skipBits) / float64(8.0)))
 
 	bs := make([]byte, needBytes)
-	if _, err := r.r.ReadAt(bs, r.offset+int64(bitsOffset/8)); err != nil {
-		return 0, fmt.Errorf("range %d - %d: %w", r.offset, r.offset+r.length, err)
+	if _, err := r.r.ReadAt(bs, int64(bitsOffset/8)); err != nil {
+		return 0, fmt.Errorf("read %d bytes at offset %d: %w", needBytes, bitsOffset/8, err)
 	}
 
 	u, err := bitio.ReadBits(bs, uint8(skipBits), uint8(r.sp.Bits))
