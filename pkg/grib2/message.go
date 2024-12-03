@@ -28,7 +28,7 @@ type Message interface {
 	Image() (image.Image, error)
 	Step() int
 
-	GetGridPointLL(n int) (float32, float32)
+	GetGridPointLL(n int) (float32, float32, bool)
 	GetGridPointFromLL(lat float32, lon float32) int
 	GetNi() int
 	GetNj() int
@@ -151,7 +151,7 @@ func (m *message) GetDataRepresentationTemplate() drt.Template {
 	return m.sec5.DataRepresentationTemplate
 }
 
-func (m *message) GetGridPointLL(n int) (float32, float32) {
+func (m *message) GetGridPointLL(n int) (float32, float32, bool) {
 	tpl := m.sec3.GetGridDefinitionTemplate()
 	return tpl.GetGridPoint(n)
 }
@@ -237,6 +237,8 @@ func (m *message) Image() (image.Image, error) {
 
 type MessageReader interface {
 	ReadLL(ctx context.Context, lat float32, lon float32) (float32, float32, float32, error)
+	GetGridIndex(lat float32, lon float32) int
+	GetGridPoint(n int) (float32, float32, bool)
 }
 
 type simplePackingMessageReader struct {
@@ -293,7 +295,7 @@ func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageInd
 
 func (r *simplePackingMessageReader) ReadLL(ctx context.Context, lat float32, lon float32) (float32, float32, float32, error) {
 	grid := r.gdt.GetGridIndex(lat, lon)
-	lat, lng := r.gdt.GetGridPoint(grid)
+	lat, lng, _ := r.gdt.GetGridPoint(grid)
 
 	v, err := r.cache.ReadGridAt(ctx, grid, lat, lng)
 	if err != nil {
@@ -301,4 +303,12 @@ func (r *simplePackingMessageReader) ReadLL(ctx context.Context, lat float32, lo
 	}
 
 	return lat, lng, v, nil
+}
+
+func (r *simplePackingMessageReader) GetGridIndex(lat float32, lon float32) int {
+	return r.gdt.GetGridIndex(lat, lon)
+}
+
+func (r *simplePackingMessageReader) GetGridPoint(n int) (float32, float32, bool) {
+	return r.gdt.GetGridPoint(n)
 }
