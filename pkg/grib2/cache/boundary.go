@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 
 	"golang.org/x/sync/singleflight"
 )
@@ -34,15 +34,15 @@ func (b *boundary) ReadGridAt(ctx context.Context, grid int, lat, lon float32) (
 		return b.datasource.ReadGridAt(ctx, grid)
 	}
 
-	v, err, _ := b.sfg.Do(fmt.Sprintf("%d", grid), func() (interface{}, error) {
-		vFromCache, ok := b.cache.Get(ctx, fmt.Sprintf("%d", grid))
+	v, err, _ := b.sfg.Do(strconv.Itoa(grid), func() (interface{}, error) {
+		vFromCache, ok := b.cache.Get(ctx, grid)
 		if !ok {
 			vFromSource, err := b.datasource.ReadGridAt(ctx, grid)
 			if err != nil {
 				return 0, err
 			}
 
-			b.cache.Set(ctx, fmt.Sprintf("%d", grid), vFromSource)
+			b.cache.Set(ctx, grid, vFromSource)
 			vFromCache = vFromSource
 		}
 
