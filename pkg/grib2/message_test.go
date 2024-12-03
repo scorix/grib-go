@@ -1,6 +1,7 @@
 package grib2_test
 
 import (
+	"context"
 	"errors"
 	"os"
 	"testing"
@@ -82,14 +83,14 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
 			{
-				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(context.TODO(), lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 
 			{
 				// read again
-				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(context.TODO(), lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
@@ -157,14 +158,14 @@ func TestMessageReader_ReadLL(t *testing.T) {
 			require.Equalf(t, i, grd, "expect: (%f,%f,%d), actual: (%f,%f,%d)", lat, lng, i, lat32, lng32, grd)
 
 			{
-				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(context.TODO(), lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
 
 			{
 				// read again
-				_, _, v, err := reader.ReadLL(lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
+				_, _, v, err := reader.ReadLL(context.TODO(), lat32, lng32) // grib_get -l 90,0 pkg/testdata/hpbl.grib2.out
 				require.NoError(t, err)
 				require.InDelta(t, float32(val), float32(v), 1e-5)
 			}
@@ -283,7 +284,7 @@ func BenchmarkMessageReader_ReadLL(b *testing.B) {
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			reader.ReadLL(-90, 0)
+			reader.ReadLL(context.TODO(), -90, 0)
 		}
 	})
 
@@ -308,7 +309,7 @@ func BenchmarkMessageReader_ReadLL(b *testing.B) {
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			reader.ReadLL(-90, 0)
+			reader.ReadLL(context.TODO(), -90, 0)
 		}
 	})
 }

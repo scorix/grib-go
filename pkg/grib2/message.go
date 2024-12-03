@@ -2,6 +2,7 @@ package grib2
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"io"
@@ -235,7 +236,7 @@ func (m *message) Image() (image.Image, error) {
 }
 
 type MessageReader interface {
-	ReadLL(float32, float32) (float32, float32, float32, error)
+	ReadLL(ctx context.Context, lat float32, lon float32) (float32, float32, float32, error)
 }
 
 type simplePackingMessageReader struct {
@@ -290,11 +291,11 @@ func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageInd
 	return NewSimplePackingMessageReader(r, mi.Offset, mi.Size, mi.DataOffset, sp, mi.GridDefinition, opts...)
 }
 
-func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float32, error) {
+func (r *simplePackingMessageReader) ReadLL(ctx context.Context, lat float32, lon float32) (float32, float32, float32, error) {
 	grid := r.gdt.GetGridIndex(lat, lon)
 	lat, lng := r.gdt.GetGridPoint(grid)
 
-	v, err := r.cache.ReadGridAt(grid, lat, lng)
+	v, err := r.cache.ReadGridAt(ctx, grid, lat, lng)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("read grid at point %d (lat: %f, lon: %f): %w", grid, lat, lng, err)
 	}
