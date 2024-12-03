@@ -117,7 +117,7 @@ func (t *Template40) GetGridIndex(lat, lon float32) (n int) {
 	return grids.GuessGridIndex(t.grids, float64(lat), float64(lon), grids.ScanMode(t.ScanningMode))
 }
 
-func (t *Template40) GetGridPoint(n int) (float32, float32) {
-	lat, lon := grids.GridPoint(t.grids, n, grids.ScanMode(t.ScanningMode))
-	return float32(lat), float32(lon)
+func (t *Template40) GetGridPoint(n int) (float32, float32, bool) {
+	lat, lon, ok := grids.GridPoint(t.grids, n, grids.ScanMode(t.ScanningMode))
+	return float32(lat), float32(lon), ok
 }

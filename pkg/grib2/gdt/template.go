@@ -11,7 +11,7 @@ type Template interface {
 	GetNi() int32
 	GetNj() int32
 	GetGridIndex(lat, lon float32) (n int)
-	GetGridPoint(n int) (float32, float32)
+	GetGridPoint(n int) (float32, float32, bool)
 }
 
 type MissingTemplate struct{}
@@ -22,8 +22,8 @@ func (m MissingTemplate) GetNj() int32                            { return 0 }
 func (m MissingTemplate) GetGridIndex(lat, lon float32) (n int) {
 	return 0
 }
-func (m MissingTemplate) GetGridPoint(n int) (float32, float32) {
-	return 0, 0
+func (m MissingTemplate) GetGridPoint(n int) (float32, float32, bool) {
+	return 0, 0, false
 }
 
 func ReadTemplate(r io.Reader, n uint16) (Template, error) {
