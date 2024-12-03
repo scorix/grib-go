@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/scorix/grib-go/internal/pkg/bitio"
+	"github.com/scorix/grib-go/pkg/grib2/cache"
 	"github.com/scorix/grib-go/pkg/grib2/drt"
 	gridpoint "github.com/scorix/grib-go/pkg/grib2/drt/grid_point"
 	"github.com/scorix/grib-go/pkg/grib2/gdt"
@@ -238,12 +239,13 @@ type MessageReader interface {
 }
 
 type simplePackingMessageReader struct {
-	sp  *gridpoint.SimplePacking
-	spr *gridpoint.SimplePackingReader
-	gdt gdt.Template
+	sp    *gridpoint.SimplePacking
+	spr   *gridpoint.SimplePackingReader
+	gdt   gdt.Template
+	cache cache.GridCache
 }
 
-func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage) (MessageReader, error) {
+func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage, opts ...SimplePackingMessageReaderOptions) (MessageReader, error) {
 	sp, ok := m.GetDataRepresentationTemplate().(*gridpoint.SimplePacking)
 	if !ok {
 		return nil, fmt.Errorf("unsupported data representation template: %T", m.GetDataRepresentationTemplate())
@@ -251,31 +253,48 @@ func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage) (
 
 	gdt := m.GetGridDefinitionTemplate()
 
-	return NewSimplePackingMessageReader(r, m.GetOffset(), m.GetSize(), m.GetDataOffset(), sp, gdt)
+	return NewSimplePackingMessageReader(r, m.GetOffset(), m.GetSize(), m.GetDataOffset(), sp, gdt, opts...)
 }
 
-func NewSimplePackingMessageReader(r io.ReaderAt, messageOffset int64, messageSize int64, dataOffset int64, sp *gridpoint.SimplePacking, gdt gdt.Template) (MessageReader, error) {
-	return &simplePackingMessageReader{
-		spr: gridpoint.NewSimplePackingReader(r, dataOffset, messageOffset+messageSize, sp),
-		sp:  sp,
-		gdt: gdt,
-	}, nil
+type SimplePackingMessageReaderOptions func(r *simplePackingMessageReader)
+
+func WithBoundary(minLat, maxLat, minLon, maxLon float32) SimplePackingMessageReaderOptions {
+	return func(r *simplePackingMessageReader) {
+		r.cache = cache.NewBoundary(minLat, maxLat, minLon, maxLon, r.spr)
+	}
 }
 
-func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageIndex) (MessageReader, error) {
+func NewSimplePackingMessageReader(r io.ReaderAt, messageOffset int64, messageSize int64, dataOffset int64, sp *gridpoint.SimplePacking, gdt gdt.Template, opts ...SimplePackingMessageReaderOptions) (MessageReader, error) {
+	spr := gridpoint.NewSimplePackingReader(r, dataOffset, messageOffset+messageSize, sp)
+
+	mr := &simplePackingMessageReader{
+		spr:   spr,
+		sp:    sp,
+		gdt:   gdt,
+		cache: cache.NewNoCache(spr),
+	}
+
+	for _, opt := range opts {
+		opt(mr)
+	}
+
+	return mr, nil
+}
+
+func NewSimplePackingMessageReaderFromMessageIndex(r io.ReaderAt, mi *MessageIndex, opts ...SimplePackingMessageReaderOptions) (MessageReader, error) {
 	sp, ok := mi.Packing.(*gridpoint.SimplePacking)
 	if !ok {
 		return nil, fmt.Errorf("unsupported packing: %T", mi.Packing)
 	}
 
-	return NewSimplePackingMessageReader(r, mi.Offset, mi.Size, mi.DataOffset, sp, mi.GridDefinition)
+	return NewSimplePackingMessageReader(r, mi.Offset, mi.Size, mi.DataOffset, sp, mi.GridDefinition, opts...)
 }
 
 func (r *simplePackingMessageReader) ReadLL(lat float32, lon float32) (float32, float32, float32, error) {
 	grid := r.gdt.GetGridIndex(lat, lon)
 	lat, lng := r.gdt.GetGridPoint(grid)
 
-	v, err := r.spr.ReadGridAt(grid)
+	v, err := r.cache.ReadGridAt(grid, lat, lng)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("read grid at point %d (lat: %f, lon: %f): %w", grid, lat, lng, err)
 	}
