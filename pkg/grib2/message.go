@@ -261,9 +261,15 @@ func NewSimplePackingMessageReaderFromMessage(r io.ReaderAt, m IndexedMessage, o
 
 type SimplePackingMessageReaderOptions func(r *simplePackingMessageReader)
 
-func WithBoundary(minLat, maxLat, minLon, maxLon float32) SimplePackingMessageReaderOptions {
+func WithBoundaryCache(minLat, maxLat, minLon, maxLon float32) SimplePackingMessageReaderOptions {
 	return func(r *simplePackingMessageReader) {
-		r.cache = cache.NewBoundary(minLat, maxLat, minLon, maxLon, r.spr)
+		r.cache = cache.NewBoundary(minLat, maxLat, minLon, maxLon, r.spr, cache.NewMapStore())
+	}
+}
+
+func WithCustomCacheStrategy(inCache func(lat, lon float32) bool) SimplePackingMessageReaderOptions {
+	return func(r *simplePackingMessageReader) {
+		r.cache = cache.NewCustom(inCache, r.spr, cache.NewMapStore())
 	}
 }
 
