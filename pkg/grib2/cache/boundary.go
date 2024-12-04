@@ -1,53 +1,9 @@
 package cache
 
-import (
-	"context"
-	"strconv"
-
-	"golang.org/x/sync/singleflight"
-)
-
-type boundary struct {
-	minLat float32
-	maxLat float32
-	minLon float32
-	maxLon float32
-
-	cache      Store
-	datasource GridDataSource
-	sfg        singleflight.Group
-}
-
-func NewBoundary(minLat, maxLat, minLon, maxLon float32, datasource GridDataSource) GridCache {
-	return &boundary{
-		minLat:     minLat,
-		maxLat:     maxLat,
-		minLon:     minLon,
-		maxLon:     maxLon,
-		datasource: datasource,
-		cache:      NewMapStore(),
-	}
-}
-
-func (b *boundary) ReadGridAt(ctx context.Context, grid int, lat, lon float32) (float32, error) {
-	if lat < b.minLat || lat > b.maxLat || lon < b.minLon || lon > b.maxLon {
-		return b.datasource.ReadGridAt(ctx, grid)
+func NewBoundary(minLat, maxLat, minLon, maxLon float32, datasource GridDataSource, cacheStore Store) GridCache {
+	inCache := func(lat, lon float32) bool {
+		return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon
 	}
 
-	v, err, _ := b.sfg.Do(strconv.Itoa(grid), func() (interface{}, error) {
-		vFromCache, ok := b.cache.Get(ctx, grid)
-		if !ok {
-			vFromSource, err := b.datasource.ReadGridAt(ctx, grid)
-			if err != nil {
-				return 0, err
-			}
-
-			b.cache.Set(ctx, grid, vFromSource)
-			vFromCache = vFromSource
-		}
-
-		return vFromCache, nil
-	})
-
-	return v.(float32), err
+	return NewCustom(inCache, datasource, cacheStore)
 }

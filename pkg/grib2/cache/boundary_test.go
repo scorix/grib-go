@@ -11,7 +11,7 @@ import (
 
 func TestBoundary(t *testing.T) {
 	ds := &mockGridDataSource{gridValue: 100}
-	bc := cache.NewBoundary(0, 10, 0, 10, ds)
+	bc := cache.NewBoundary(0, 10, 0, 10, ds, cache.NewMapStore())
 
 	// first read should be from source
 	v, err := bc.ReadGridAt(context.TODO(), 1, 1, 1)
