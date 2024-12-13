@@ -13,10 +13,11 @@ type Store interface {
 
 // LRU Cache 实现
 type lruStore struct {
-	mu       sync.RWMutex
-	capacity int
-	cache    map[int]*list.Element
-	lru      *list.List
+	mu        sync.RWMutex
+	capacity  int
+	cache     map[int]*list.Element
+	lru       *list.List
+	entryPool sync.Pool
 }
 
 type entry struct {
@@ -29,6 +30,11 @@ func NewLRUStore(capacity int) Store {
 		capacity: capacity,
 		cache:    make(map[int]*list.Element, capacity),
 		lru:      list.New(),
+		entryPool: sync.Pool{
+			New: func() any {
+				return &entry{}
+			},
+		},
 	}
 }
 
@@ -60,11 +66,15 @@ func (l *lruStore) Set(ctx context.Context, key int, value float32) {
 		if oldest != nil {
 			delete(l.cache, oldest.Value.(*entry).key)
 			l.lru.Remove(oldest)
+			l.entryPool.Put(oldest.Value)
 		}
 	}
 
 	// 添加新条目
-	elem := l.lru.PushFront(&entry{key: key, value: value})
+	newEntry := l.entryPool.Get().(*entry)
+	newEntry.key = key
+	newEntry.value = value
+	elem := l.lru.PushFront(newEntry)
 	l.cache[key] = elem
 }
 
