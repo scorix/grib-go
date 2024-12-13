@@ -4,9 +4,6 @@ import (
 	"container/list"
 	"context"
 	"sync"
-
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type Store interface {
@@ -39,15 +36,11 @@ func (l *lruStore) Get(ctx context.Context, key int) (float32, bool) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
-	sp := trace.SpanFromContext(ctx)
-
 	if elem, ok := l.cache[key]; ok {
 		l.lru.MoveToFront(elem)
-		sp.SetAttributes(attribute.Int("cache.grid", key), attribute.Bool("cache.hit", true))
 		return elem.Value.(*entry).value, true
 	}
 
-	sp.SetAttributes(attribute.Int("cache.grid", key), attribute.Bool("cache.hit", false))
 	return 0, false
 }
 
@@ -90,9 +83,6 @@ func (m *mapStore) Get(ctx context.Context, grid int) (float32, bool) {
 	defer m.mu.RUnlock()
 
 	v, ok := m.cache[grid]
-
-	sp := trace.SpanFromContext(ctx)
-	sp.SetAttributes(attribute.Int("cache.grid", grid), attribute.Bool("cache.hit", ok))
 
 	return v, ok
 }
