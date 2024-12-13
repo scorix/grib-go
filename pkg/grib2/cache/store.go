@@ -30,7 +30,7 @@ type entry struct {
 func NewLRUStore(capacity int) Store {
 	return &lruStore{
 		capacity: capacity,
-		cache:    make(map[int]*list.Element),
+		cache:    make(map[int]*list.Element, capacity),
 		lru:      list.New(),
 	}
 }
@@ -39,14 +39,14 @@ func (l *lruStore) Get(ctx context.Context, key int) (float32, bool) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
+	sp := trace.SpanFromContext(ctx)
+
 	if elem, ok := l.cache[key]; ok {
 		l.lru.MoveToFront(elem)
-		sp := trace.SpanFromContext(ctx)
 		sp.SetAttributes(attribute.Int("cache.grid", key), attribute.Bool("cache.hit", true))
 		return elem.Value.(*entry).value, true
 	}
 
-	sp := trace.SpanFromContext(ctx)
 	sp.SetAttributes(attribute.Int("cache.grid", key), attribute.Bool("cache.hit", false))
 	return 0, false
 }
